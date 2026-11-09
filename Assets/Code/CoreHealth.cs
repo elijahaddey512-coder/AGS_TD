@@ -15,6 +15,9 @@ public class CoreHealth : MonoBehaviour
     public float Progress => holdTimer / holdDuration;
     public bool IsDestroyed => isDestroyed;
 
+    public eheath healthbar;    
+
+
     public void AdvanceHold(float deltaTime)
     {
         if (isDestroyed)
