@@ -16,6 +16,9 @@ public class ShielderAI : MonoBehaviour
     [SerializeField] private float chargeSpeed = 12f;
     [SerializeField] private float returnSpeed = 8f;
     [SerializeField] private float chargeCooldown = 10f;
+    
+    [Header("Movement")]
+    [SerializeField] private float followDistance = 4f;
 
     [Header("Charge Damage")]
     [SerializeField] private float chargeDamage = 20f;
@@ -34,6 +37,9 @@ public class ShielderAI : MonoBehaviour
 
     private bool isCharging;
     private float nextChargeTime;
+    private Transform followTarget;
+    private bool hasCommandDestination;
+    private Vector3 commandDestination;
 
     public float CooldownRemaining =>
         Mathf.Max(0f, nextChargeTime - Time.time);
@@ -50,6 +56,28 @@ public class ShielderAI : MonoBehaviour
             animator = GetComponentInChildren<Animator>();
     }
 
+    public void SetFollowTarget(Transform target)
+    {
+        if (hiring == null || !hiring.IsHired)
+            return;
+
+        followTarget = target;
+
+        hasCommandDestination = false;
+
+        Debug.Log("Shielder is now following the player!");
+    }
+
+    public void StopFollowing()
+    {
+        followTarget = null;
+
+        agent.isStopped = true;
+        agent.ResetPath();
+
+        Debug.Log("Shielder stopped following!");
+    }
+
     private void Update()
     {
         if (ownHealth != null && ownHealth.IsDead)
@@ -64,7 +92,15 @@ public class ShielderAI : MonoBehaviour
         if (Input.GetKeyDown(chargeKey))
         {
             ActivateCharge();
+
+            if (isCharging)
+                return;
         }
+
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+            return;
+
+        FollowPlayer();
 
         UpdateMovementAnimation();
     }
@@ -291,6 +327,33 @@ public class ShielderAI : MonoBehaviour
             );
         }
     }
+
+    private void FollowPlayer()
+    {
+        if (followTarget == null)
+        {
+            agent.isStopped = true;
+            agent.ResetPath();
+            return;
+        }
+
+        float distance = Vector3.Distance(
+            transform.position,
+            followTarget.position
+        );
+
+        if (distance > followDistance)
+        {
+            agent.isStopped = false;
+            agent.SetDestination(followTarget.position);
+        }
+        else
+        {
+            agent.isStopped = true;
+            agent.ResetPath();
+        }
+    }
+
 
     // =====================================
     // FIND NEAREST ENEMY

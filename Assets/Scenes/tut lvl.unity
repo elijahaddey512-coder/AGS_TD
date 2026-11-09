@@ -545,6 +545,7 @@ MonoBehaviour:
   shootingAnimationDuration: 0.7
   moveSpeed: 1.5
   rotationSpeed: 240
+  followDistance: 4
   animator: {fileID: 12337858}
 --- !u!114 &12337862
 MonoBehaviour:
@@ -44405,6 +44406,7 @@ MonoBehaviour:
   attackAnimationDuration: 0.5
   moveSpeed: 3.5
   rotationSpeed: 360
+  followDistance: 4
   animator: {fileID: 1319263893}
   idleTrigger: Idle
   runTrigger: Run
@@ -55139,6 +55141,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 3340476349890344612, guid: 39eda795caed6644f8188ea1c6c1fc43, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1859595954}
+    - targetCorrespondingSourceObject: {fileID: 3340476349890344612, guid: 39eda795caed6644f8188ea1c6c1fc43, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1859595955}
   m_SourcePrefab: {fileID: 100100000, guid: 39eda795caed6644f8188ea1c6c1fc43, type: 3}
 --- !u!4 &1680891125 stripped
 Transform:
@@ -60193,6 +60198,19 @@ MonoBehaviour:
   emptySlotSprite: {fileID: 0}
   cam: {fileID: 2065489146}
   pickUpItem_gameObject: {fileID: 1600382777}
+--- !u!114 &1859595955
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1859595937}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ae5f1bf49e591d42a4e30e7983e3ce4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AllyCommand
+  playerHiring: {fileID: 0}
 --- !u!1001 &1859988718
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -45,7 +45,11 @@ public class playerSlots : MonoBehaviour
         itemSetActive.Add(itemType.Support, supportItem);
         itemSetActive.Add(itemType.Sheilder, sheilderItem);
 
-        NewItemSelected(); // items
+        if (inventoryList.Count > 0)
+        {
+            selectedItem = 0;
+            NewItemSelected();
+        }
     }
     private void Update()
     {
@@ -166,14 +170,22 @@ public class playerSlots : MonoBehaviour
        
     }
 
-    private void NewItemSelected()//iventory for item
+    private void NewItemSelected()
     {
+        if (inventoryList == null || inventoryList.Count == 0)
+            return;
+
+        if (selectedItem < 0 || selectedItem >= inventoryList.Count)
+            return;
+
         brawlerItem.SetActive(false);
         shooterItem.SetActive(false);
         sheilderItem.SetActive(false);
         supportItem.SetActive(false);
 
-        GameObject selectedItemGameobject = itemSetActive[inventoryList[selectedItem]];
+        GameObject selectedItemGameobject =
+            itemSetActive[inventoryList[selectedItem]];
+
         selectedItemGameobject.SetActive(true);
     }
 }

@@ -91,6 +91,18 @@ public class BrawlerAI : MonoBehaviour
         Debug.Log("Brawler is now following the player!");
     }
 
+    public void StopFollowing()
+    {
+        followTarget = null;
+
+        agent.isStopped = true;
+        agent.ResetPath();
+
+        PlayMovement(false);
+
+        Debug.Log("Brawler stopped following!");
+    }
+
     private void Update()
     {
         if (hiring == null || !hiring.IsHired)

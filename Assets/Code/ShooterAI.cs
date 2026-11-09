@@ -68,6 +68,16 @@ public class ShooterAI : MonoBehaviour
         Debug.Log("Shooter is now following the player!");
     }
 
+    public void StopFollowing()
+    {
+        followTarget = null;
+
+        agent.isStopped = true;
+        agent.ResetPath();
+
+        Debug.Log("Shooter stopped following!");
+    }
+
     private void Update()
     {
         if (hiring == null || !hiring.IsHired)

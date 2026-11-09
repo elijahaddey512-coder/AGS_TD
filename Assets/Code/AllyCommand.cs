@@ -3,6 +3,8 @@ using UnityEngine.AI;
 
 public class AllyCommand : MonoBehaviour
 {
+    private bool alliesFollowing = false;
+
     [Header("References")]
     [SerializeField] private PlayerHiring playerHiring;
 
@@ -27,40 +29,52 @@ public class AllyCommand : MonoBehaviour
     {
         if (playerHiring == null)
             return;
-        
-        NavMeshHit hit;
 
-        bool playerOnNavMesh = NavMesh.SamplePosition(
-            transform.position,
-            out hit,
-            2f,
-            NavMesh.AllAreas
-        );
+        alliesFollowing = !alliesFollowing;
 
-        Debug.Log("Player on NavMesh: " + playerOnNavMesh);
-
-        if (playerOnNavMesh)
-        {
-            Debug.Log("Closest NavMesh position: " + hit.position);
-        }
         foreach (UniversalHiring ally in playerHiring.HiredAllies)
         {
-            switch (ally)
+            if (ally == null)
+                continue;
+
+            if (alliesFollowing)
             {
-                case var a when a.GetComponent<ShooterAI>() != null:
-                    a.GetComponent<ShooterAI>().SetFollowTarget(transform);
-                    break;
+                switch (ally)
+                {
+                    case var a when a.GetComponent<ShooterAI>() != null:
+                        a.GetComponent<ShooterAI>().SetFollowTarget(transform);
+                        break;
 
-                case var a when a.GetComponent<BrawlerAI>() != null:
-                    a.GetComponent<BrawlerAI>().SetFollowTarget(transform);
-                    break;
+                    case var a when a.GetComponent<BrawlerAI>() != null:
+                        a.GetComponent<BrawlerAI>().SetFollowTarget(transform);
+                        break;
 
-                default:
-                    ally.SummonToPlayer(transform.position);
-                    break;
+                    case var a when a.GetComponent<ShielderAI>() != null:
+                        a.GetComponent<ShielderAI>().SetFollowTarget(transform);
+                        break;
+
+                    default:
+                        ally.SummonToPlayer(transform.position);
+                        break;
+                }
+            }
+            else
+            {
+                switch (ally)
+                {
+                    case var a when a.GetComponent<ShooterAI>() != null:
+                        a.GetComponent<ShooterAI>().StopFollowing();
+                        break;
+
+                    case var a when a.GetComponent<BrawlerAI>() != null:
+                        a.GetComponent<BrawlerAI>().StopFollowing();
+                        break;
+
+                    case var a when a.GetComponent<ShielderAI>() != null:
+                        a.GetComponent<ShielderAI>().StopFollowing();
+                        break;
+                }
             }
         }
-
-        Debug.Log("Summon command issued!");
     }
 }
