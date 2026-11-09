@@ -12,6 +12,8 @@ public class HealthSystem : MonoBehaviour
     [SerializeField] private Animator animator;
 
     public float CurrentHealth { get; private set; }
+    public int CurrentHealths;
+    public int maxHealths = 100;
     public float MaxHealth => maxHealth;
     public bool IsDead => isDead;
 
@@ -20,6 +22,9 @@ public class HealthSystem : MonoBehaviour
 
     private bool isDead;
 
+    public eheath healthbar;
+
+     
     private void Awake()
     {
         if (animator == null)
@@ -30,12 +35,17 @@ public class HealthSystem : MonoBehaviour
             0f,
             maxHealth
         );
-    }
+
+        if (healthbar != null)//
+        {
+            healthbar.SetMaxHealth((int)maxHealth);
+        }
+    
+}
 
     // =====================================
     // TAKE DAMAGE
     // =====================================
-
     public void TakeDamage(float damage)
     {
         ApplyDamage(damage);
@@ -60,6 +70,12 @@ public class HealthSystem : MonoBehaviour
         CurrentHealth -= damage;
         CurrentHealth = Mathf.Max(CurrentHealth, 0f);
 
+        if (healthbar != null)//
+        {
+            healthbar.SetHealth((int)CurrentHealth);
+        }
+
+
         Debug.Log(
             gameObject.name + " took " + damage +
             " damage. HP: " + CurrentHealth
@@ -73,6 +89,8 @@ public class HealthSystem : MonoBehaviour
         {
             animator.SetTrigger("Hurt");
         }
+        
+
     }
 
     // =====================================
