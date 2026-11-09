@@ -1,5 +1,4 @@
 
-
 using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
@@ -53,6 +52,9 @@ public class BrawlerAI : MonoBehaviour
 
     public float CooldownRemaining =>
         Mathf.Max(0f, nextSkillTime - Time.time);
+
+    // Used by SupportAI to check base damage.
+    public float BaseDamage => damage;
 
     private void Awake()
     {
@@ -224,8 +226,18 @@ public class BrawlerAI : MonoBehaviour
         if (enemyHealth == null || enemyHealth.IsDead)
             return;
 
+        // Check whether the Brawler has a damage buff.
+        DamageBuffReceiver buff =
+            GetComponent<DamageBuffReceiver>();
+
+        float multiplier = buff != null
+            ? buff.DamageMultiplier
+            : 1f;
+
+        float finalDamage = damage * multiplier;
+
         // Identify the Brawler as the attacker.
-        enemyHealth.TakeDamage(damage, transform);
+        enemyHealth.TakeDamage(finalDamage, transform);
 
         if (animator != null)
         {
@@ -326,6 +338,16 @@ public class BrawlerAI : MonoBehaviour
         HashSet<HealthSystem> damagedEnemies =
             new HashSet<HealthSystem>();
 
+        // Check the buff once for this skill.
+        DamageBuffReceiver buff =
+            GetComponent<DamageBuffReceiver>();
+
+        float multiplier = buff != null
+            ? buff.DamageMultiplier
+            : 1f;
+
+        float finalDamage = skillDamage * multiplier;
+
         foreach (Collider hitObject in hitObjects)
         {
             if (!HasEnemyTag(hitObject.transform))
@@ -341,7 +363,7 @@ public class BrawlerAI : MonoBehaviour
             if (damagedEnemies.Add(health))
             {
                 // Identify the Brawler as the skill attacker.
-                health.TakeDamage(skillDamage, transform);
+                health.TakeDamage(finalDamage, transform);
             }
         }
     }
@@ -516,6 +538,7 @@ public class BrawlerAI : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, impactRadius);
     }
 }
+
 
 
 

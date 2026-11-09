@@ -33,6 +33,10 @@ public class ShooterAI : MonoBehaviour
 
     private Vector3 commandDestination;
 
+    // Used by SupportAI to check minimum base damage.
+    public float BaseDamage =>
+        Mathf.Min(groundDamage, flyingDamage);
+
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
@@ -223,6 +227,16 @@ public class ShooterAI : MonoBehaviour
 
         float damageToDeal =
             bee != null ? flyingDamage : groundDamage;
+
+        // Check whether the Shooter has a damage buff.
+        DamageBuffReceiver buff =
+            GetComponent<DamageBuffReceiver>();
+
+        float multiplier = buff != null
+            ? buff.DamageMultiplier
+            : 1f;
+
+        damageToDeal *= multiplier;
 
         // Identify the Shooter as the attacker.
         enemyHealth.TakeDamage(damageToDeal, transform);
@@ -421,5 +435,6 @@ public class ShooterAI : MonoBehaviour
         );
     }
 }
+
 
 

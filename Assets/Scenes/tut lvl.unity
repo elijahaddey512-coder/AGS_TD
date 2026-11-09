@@ -403,8 +403,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HealthSystem
   maxHealth: 50
-  animator: {fileID: 0}
+  startingHealth: 100
   deathAnimationDuration: 2
+  animator: {fileID: 12337858}
 --- !u!136 &12337856
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -20869,8 +20870,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HealthSystem
   maxHealth: 120
-  animator: {fileID: 0}
+  startingHealth: 100
   deathAnimationDuration: 2
+  animator: {fileID: 0}
 --- !u!136 &681207644
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -33981,10 +33983,10 @@ PrefabInstance:
       addedObject: {fileID: 1319263903}
     - targetCorrespondingSourceObject: {fileID: 8210264448598483523, guid: 2f0b03edf848dc748b2423e7c578c7d2, type: 3}
       insertIndex: 2
-      addedObject: {fileID: 1319263899}
+      addedObject: {fileID: 1319263904}
     - targetCorrespondingSourceObject: {fileID: 8210264448598483523, guid: 2f0b03edf848dc748b2423e7c578c7d2, type: 3}
       insertIndex: 3
-      addedObject: {fileID: 1319263898}
+      addedObject: {fileID: 1319263899}
     - targetCorrespondingSourceObject: {fileID: 8210264448598483523, guid: 2f0b03edf848dc748b2423e7c578c7d2, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1319263891}
@@ -39724,6 +39726,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6940608250403808096, guid: d69dd1165ba02144a910058adf5fb078, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1448197888}
+    - targetCorrespondingSourceObject: {fileID: 6940608250403808096, guid: d69dd1165ba02144a910058adf5fb078, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1448197894}
+    - targetCorrespondingSourceObject: {fileID: 6940608250403808096, guid: d69dd1165ba02144a910058adf5fb078, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1448197893}
+    - targetCorrespondingSourceObject: {fileID: 6940608250403808096, guid: d69dd1165ba02144a910058adf5fb078, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1448197892}
   m_SourcePrefab: {fileID: 100100000, guid: d69dd1165ba02144a910058adf5fb078, type: 3}
 --- !u!4 &1279396089 stripped
 Transform:
@@ -40921,21 +40932,6 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
---- !u!114 &1319263898
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1319263886}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 31dcdcc364009254084e67e7fefb9dfe, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::BrawlerHealth
-  maxHealth: 70
-  deathAnimationDuration: 2
-  animator: {fileID: 1319263893}
 --- !u!114 &1319263899
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -40984,6 +40980,22 @@ MonoBehaviour:
   hiringDistance: 3
   animator: {fileID: 1319263893}
   idleTrigger: Idle
+--- !u!114 &1319263904
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1319263886}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cce0c3e6a0250c442b37f4d1cd272b5c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HealthSystem
+  maxHealth: 100
+  startingHealth: 100
+  deathAnimationDuration: 2
+  animator: {fileID: 1319263893}
 --- !u!1001 &1321485409
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -44579,9 +44591,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cce0c3e6a0250c442b37f4d1cd272b5c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HealthSystem
-  maxHealth: 30
-  animator: {fileID: 1448197890}
+  maxHealth: 50
+  startingHealth: 100
   deathAnimationDuration: 2
+  animator: {fileID: 1448197890}
 --- !u!136 &1448197888
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -44610,6 +44623,69 @@ Animator:
   m_CorrespondingSourceObject: {fileID: 5665452497462068518, guid: d69dd1165ba02144a910058adf5fb078, type: 3}
   m_PrefabInstance: {fileID: 1278791415}
   m_PrefabAsset: {fileID: 0}
+--- !u!195 &1448197892
+NavMeshAgent:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1448197883}
+  m_Enabled: 1
+  m_AgentTypeID: 0
+  m_Radius: 0.5
+  m_Speed: 3.5
+  m_Acceleration: 8
+  avoidancePriority: 50
+  m_AngularSpeed: 120
+  m_StoppingDistance: 0
+  m_AutoTraverseOffMeshLink: 1
+  m_AutoBraking: 1
+  m_AutoRepath: 1
+  m_Height: 2
+  m_BaseOffset: 0
+  m_WalkableMask: 4294967295
+  m_ObstacleAvoidanceType: 4
+--- !u!114 &1448197893
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1448197883}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 125c6907cce93754da73ab1a83952c86, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SupportAI
+  hiring: {fileID: 1448197894}
+  animator: {fileID: 1448197890}
+  damageMultiplier: 1.3
+  buffDuration: 10
+  normalBuffInterval: 10
+  supportRange: 10
+  healThreshold: 60
+  healAmount: 40
+  healCheckInterval: 1
+  skillKey: 51
+  skillRadius: 5
+  skillHealAmount: 40
+  skillCooldown: 15
+  healAnimationDuration: 0.8
+--- !u!114 &1448197894
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1448197883}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b74042317603edb439382197ba9e9875, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UniversalHiring
+  hiringDistance: 3
+  animator: {fileID: 1448197890}
+  idleTrigger: Idle
 --- !u!4 &1449677220 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: e2bd5d68901aab44b99f8701bd953754, type: 3}
@@ -55257,8 +55333,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HealthSystem
   maxHealth: 100
-  animator: {fileID: 1859595951}
+  startingHealth: 100
   deathAnimationDuration: 2
+  animator: {fileID: 1859595951}
 --- !u!136 &1859595942
 CapsuleCollider:
   m_ObjectHideFlags: 0

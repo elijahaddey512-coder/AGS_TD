@@ -1,34 +1,40 @@
-
 using UnityEngine;
 using UnityEngine.AI;
 
 public class HealthSystem : MonoBehaviour
 {
-    [Header("Health Settings")]
+    [Header("Health")]
     [SerializeField] private float maxHealth = 100f;
+    [SerializeField] private float startingHealth = 100f;
 
-    [Header("Animation Settings")]
-    [SerializeField] private Animator animator;
+    [Header("Death")]
     [SerializeField] private float deathAnimationDuration = 2f;
+    [SerializeField] private Animator animator;
 
-    private float currentHealth;
-    private bool isDead = false;
+    public float CurrentHealth { get; private set; }
+    public float MaxHealth => maxHealth;
+    public bool IsDead => isDead;
 
     public Transform LastAttacker { get; private set; }
     public float LastAttackedTime { get; private set; }
 
-    public float CurrentHealth => currentHealth;
-    public bool IsDead => isDead;
+    private bool isDead;
 
     private void Awake()
     {
-        currentHealth = maxHealth;
-
         if (animator == null)
-        {
             animator = GetComponentInChildren<Animator>();
-        }
+
+        CurrentHealth = Mathf.Clamp(
+            startingHealth,
+            0f,
+            maxHealth
+        );
     }
+
+    // =====================================
+    // TAKE DAMAGE
+    // =====================================
 
     public void TakeDamage(float damage)
     {
@@ -48,32 +54,53 @@ public class HealthSystem : MonoBehaviour
 
     private void ApplyDamage(float damage)
     {
-        if (isDead)
+        if (isDead || damage <= 0f)
             return;
 
-        currentHealth -= damage;
-        currentHealth = Mathf.Max(currentHealth, 0f);
+        CurrentHealth -= damage;
+        CurrentHealth = Mathf.Max(CurrentHealth, 0f);
 
-        Debug.Log(gameObject.name + " took " + damage +
-                  " damage. HP: " + currentHealth);
+        Debug.Log(
+            gameObject.name + " took " + damage +
+            " damage. HP: " + CurrentHealth
+        );
 
-        if (currentHealth <= 0f)
+        if (CurrentHealth <= 0f)
         {
             Die();
         }
-        else
-        {
-            PlayHurtAnimation();
-        }
-    }
-
-    private void PlayHurtAnimation()
-    {
-        if (animator != null)
+        else if (animator != null)
         {
             animator.SetTrigger("Hurt");
         }
     }
+
+    // =====================================
+    // HEAL
+    // =====================================
+
+    public void Heal(float amount)
+    {
+        if (isDead || amount <= 0f)
+            return;
+
+        float previousHealth = CurrentHealth;
+
+        CurrentHealth = Mathf.Min(
+            CurrentHealth + amount,
+            maxHealth
+        );
+
+        Debug.Log(
+            gameObject.name + " healed for " +
+            (CurrentHealth - previousHealth) +
+            ". HP: " + CurrentHealth
+        );
+    }
+
+    // =====================================
+    // DEATH
+    // =====================================
 
     private void Die()
     {
