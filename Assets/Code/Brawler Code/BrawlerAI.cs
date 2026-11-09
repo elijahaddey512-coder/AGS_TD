@@ -30,6 +30,10 @@ public class BrawlerAI : MonoBehaviour
     private bool isMoving;
     private bool isUsingSkill;
 
+    // Command movement
+    private bool hasCommandDestination;
+    private Vector3 commandDestination;
+
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
@@ -60,6 +64,13 @@ public class BrawlerAI : MonoBehaviour
 
         if (isUsingSkill)
             return;
+
+        // Follow the player's movement command first.
+        if (hasCommandDestination)
+        {
+            FollowCommandDestination();
+            return;
+        }
 
         // Wait for the attack animation to finish.
         if (Time.time < attackEndTime)
@@ -267,6 +278,59 @@ public class BrawlerAI : MonoBehaviour
             isMoving = false;
     }
 
+    // =====================================
+    // COMMAND MOVEMENT SYSTEM
+    // =====================================
+
+    public void SetCommandDestination(Vector3 destination)
+    {
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+            return;
+
+        hasCommandDestination = true;
+        commandDestination = destination;
+
+        agent.isStopped = false;
+        agent.SetDestination(commandDestination);
+
+        PlayMovement(true);
+
+        Debug.Log("Brawler received movement command!");
+    }
+
+    private void FollowCommandDestination()
+    {
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+            return;
+
+        if (agent.pathPending)
+            return;
+
+        // Check whether the Brawler has reached its destination.
+        if (agent.hasPath &&
+            agent.remainingDistance <= agent.stoppingDistance + 0.2f)
+        {
+            hasCommandDestination = false;
+
+            agent.isStopped = true;
+            agent.ResetPath();
+
+            PlayMovement(false);
+
+            Debug.Log("Brawler reached its destination!");
+            return;
+        }
+
+        // Continue moving towards the destination.
+        agent.isStopped = false;
+
+        Vector3 direction = agent.desiredVelocity;
+        direction.y = 0f;
+
+        RotateTowards(direction);
+        PlayMovement(true);
+    }
+
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
@@ -276,4 +340,5 @@ public class BrawlerAI : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, attackRange);
     }
 }
+
 

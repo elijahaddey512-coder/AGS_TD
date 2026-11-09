@@ -5,9 +5,7 @@ using UnityEngine.AI;
 public class BrawlerHiring : MonoBehaviour
 {
     [Header("Hiring Settings")]
-    [SerializeField] private Transform player;
     [SerializeField] private float hiringDistance = 3f;
-    [SerializeField] private KeyCode hiringKey = KeyCode.F;
 
     [Header("Animation")]
     [SerializeField] private Animator animator;
@@ -15,6 +13,7 @@ public class BrawlerHiring : MonoBehaviour
     private NavMeshAgent agent;
 
     public bool IsHired { get; private set; } = false;
+    public float HiringDistance => hiringDistance;
 
     private void Awake()
     {
@@ -28,19 +27,6 @@ public class BrawlerHiring : MonoBehaviour
 
     private void Start()
     {
-        // Find the Player automatically if one is not assigned.
-        if (player == null)
-        {
-            GameObject playerObject =
-                GameObject.FindGameObjectWithTag("Player");
-
-            if (playerObject != null)
-            {
-                player = playerObject.transform;
-            }
-        }
-
-        // Keep the Brawler stationary until hired.
         if (agent != null && agent.enabled && agent.isOnNavMesh)
         {
             agent.isStopped = true;
@@ -53,24 +39,7 @@ public class BrawlerHiring : MonoBehaviour
         }
     }
 
-    private void Update()
-    {
-        if (IsHired || player == null)
-            return;
-
-        float distance = Vector3.Distance(
-            transform.position,
-            player.position
-        );
-
-        if (distance <= hiringDistance &&
-            Input.GetKeyDown(hiringKey))
-        {
-            HireBrawler();
-        }
-    }
-
-    private void HireBrawler()
+    public void HireBrawler()
     {
         if (IsHired)
             return;
@@ -84,12 +53,9 @@ public class BrawlerHiring : MonoBehaviour
             agent.isStopped = false;
         }
     }
-
-    private void OnDrawGizmosSelected()
-    {
-        Gizmos.color = Color.green;
-        Gizmos.DrawWireSphere(transform.position, hiringDistance);
-    }
 }
+
+
+
 
 
