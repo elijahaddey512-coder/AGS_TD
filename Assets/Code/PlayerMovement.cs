@@ -29,18 +29,13 @@ public class PlayerMovement : MonoBehaviour
         float horizontal = Input.GetAxisRaw("Horizontal");
         float vertical = Input.GetAxisRaw("Vertical");
 
-        Vector3 inputDirection =
-            new Vector3(horizontal, 0f, vertical).normalized;
+        Vector3 inputDirection = new Vector3(horizontal, 0f, vertical).normalized;
 
         if (inputDirection.magnitude >= 0.1f)
         {
-            Vector3 cameraForward = cameraTransform != null
-                ? cameraTransform.forward
-                : Vector3.forward;
+            Vector3 cameraForward = cameraTransform != null? cameraTransform.forward : Vector3.forward;
 
-            Vector3 cameraRight = cameraTransform != null
-                ? cameraTransform.right
-                : Vector3.right;
+            Vector3 cameraRight = cameraTransform != null? cameraTransform.right : Vector3.right;
 
             cameraForward.y = 0f;
             cameraRight.y = 0f;
@@ -48,18 +43,12 @@ public class PlayerMovement : MonoBehaviour
             cameraForward.Normalize();
             cameraRight.Normalize();
 
-            Vector3 moveDirection =
-                cameraForward * inputDirection.z +
-                cameraRight * inputDirection.x;
+            Vector3 moveDirection = cameraForward * inputDirection.z + cameraRight * inputDirection.x;
 
             controller.Move(moveDirection.normalized * moveSpeed * Time.deltaTime);
 
             // Rotate the player towards the movement direction.
-            transform.rotation = Quaternion.Slerp(
-                transform.rotation,
-                Quaternion.LookRotation(moveDirection),
-                12f * Time.deltaTime
-            );
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(moveDirection), 12f * Time.deltaTime);
         }
 
         // Gravity.
