@@ -20,7 +20,6 @@ public class BrawlerHealth : MonoBehaviour
 
     private NavMeshAgent agent;
     private BrawlerAI brawlerAI;
-    private BrawlerSkill brawlerSkill;
 
     private void Awake()
     {
@@ -28,13 +27,14 @@ public class BrawlerHealth : MonoBehaviour
 
         agent = GetComponent<NavMeshAgent>();
         brawlerAI = GetComponent<BrawlerAI>();
-        brawlerSkill = GetComponent<BrawlerSkill>();
 
         if (animator == null)
-        {
             animator = GetComponentInChildren<Animator>();
-        }
     }
+
+    // =====================================
+    // TAKE DAMAGE
+    // =====================================
 
     public void TakeDamage(float damage)
     {
@@ -59,13 +59,26 @@ public class BrawlerHealth : MonoBehaviour
         }
     }
 
+    // =====================================
+    // HURT ANIMATION
+    // =====================================
+
     private void PlayHurtAnimation()
     {
-        if (animator != null)
-        {
-            animator.SetTrigger("Hurt");
-        }
+        if (animator == null)
+            return;
+
+        animator.ResetTrigger("Idle");
+        animator.ResetTrigger("Run");
+        animator.ResetTrigger("Attack");
+        animator.ResetTrigger("Skill");
+
+        animator.SetTrigger("Hurt");
     }
+
+    // =====================================
+    // DEATH
+    // =====================================
 
     private void Die()
     {
@@ -76,24 +89,23 @@ public class BrawlerHealth : MonoBehaviour
 
         Debug.Log("Brawler has died!");
 
-        // Stop the Brawler's AI and skill scripts.
+        // Stop Brawler AI and its skill coroutine.
         if (brawlerAI != null)
-        {
             brawlerAI.enabled = false;
-        }
 
-        if (brawlerSkill != null)
-        {
-            brawlerSkill.enabled = false;
-        }
-
-        // Play the death animation.
+        // Play death animation.
         if (animator != null)
         {
+            animator.ResetTrigger("Idle");
+            animator.ResetTrigger("Run");
+            animator.ResetTrigger("Attack");
+            animator.ResetTrigger("Skill");
+            animator.ResetTrigger("Hurt");
+
             animator.SetTrigger("Die");
         }
 
-        // Stop movement.
+        // Stop NavMesh movement.
         if (agent != null && agent.enabled)
         {
             if (agent.isOnNavMesh)
@@ -105,8 +117,10 @@ public class BrawlerHealth : MonoBehaviour
             agent.enabled = false;
         }
 
-        // Remove the Brawler after the death animation.
+        // Destroy after death animation.
         Destroy(gameObject, deathAnimationDuration);
     }
 }
+
+
 

@@ -11,8 +11,15 @@ public class PlayerMovement : MonoBehaviour
     [Header("Camera")]
     [SerializeField] private Transform cameraTransform;
 
+    [Header("Animation")]
+    [SerializeField] private Animator animator;
+    [SerializeField] private string runTrigger = "Run";
+    [SerializeField] private string idleTrigger = "Idle";
+
     private CharacterController controller;
     private Vector3 verticalVelocity;
+
+    private bool isRunning = false;
 
     private void Awake()
     {
@@ -22,20 +29,38 @@ public class PlayerMovement : MonoBehaviour
         {
             cameraTransform = Camera.main.transform;
         }
+
+        if (animator == null)
+        {
+            animator = GetComponentInChildren<Animator>();
+        }
     }
 
     private void Update()
     {
+        HandleMovement();
+        HandleGravity();
+    }
+
+    private void HandleMovement()
+    {
         float horizontal = Input.GetAxisRaw("Horizontal");
         float vertical = Input.GetAxisRaw("Vertical");
 
-        Vector3 inputDirection = new Vector3(horizontal, 0f, vertical).normalized;
+        Vector3 inputDirection =
+            new Vector3(horizontal, 0f, vertical).normalized;
 
-        if (inputDirection.magnitude >= 0.1f)
+        bool hasMovementInput = inputDirection.magnitude >= 0.1f;
+
+        if (hasMovementInput)
         {
-            Vector3 cameraForward = cameraTransform != null? cameraTransform.forward : Vector3.forward;
+            Vector3 cameraForward = cameraTransform != null
+                ? cameraTransform.forward
+                : Vector3.forward;
 
-            Vector3 cameraRight = cameraTransform != null? cameraTransform.right : Vector3.right;
+            Vector3 cameraRight = cameraTransform != null
+                ? cameraTransform.right
+                : Vector3.right;
 
             cameraForward.y = 0f;
             cameraRight.y = 0f;
@@ -43,15 +68,31 @@ public class PlayerMovement : MonoBehaviour
             cameraForward.Normalize();
             cameraRight.Normalize();
 
-            Vector3 moveDirection = cameraForward * inputDirection.z + cameraRight * inputDirection.x;
+            Vector3 moveDirection =
+                cameraForward * inputDirection.z +
+                cameraRight * inputDirection.x;
 
-            controller.Move(moveDirection.normalized * moveSpeed * Time.deltaTime);
+            controller.Move(
+                moveDirection.normalized * moveSpeed * Time.deltaTime
+            );
 
-            // Rotate the player towards the movement direction.
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(moveDirection), 12f * Time.deltaTime);
+            // Rotate player towards movement direction.
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                Quaternion.LookRotation(moveDirection),
+                12f * Time.deltaTime
+            );
+
+            PlayRunAnimation();
         }
+        else
+        {
+            PlayIdleAnimation();
+        }
+    }
 
-        // Gravity.
+    private void HandleGravity()
+    {
         if (controller.isGrounded && verticalVelocity.y < 0f)
         {
             verticalVelocity.y = -2f;
@@ -61,5 +102,34 @@ public class PlayerMovement : MonoBehaviour
 
         controller.Move(verticalVelocity * Time.deltaTime);
     }
+
+    private void PlayRunAnimation()
+    {
+        if (isRunning)
+            return;
+
+        isRunning = true;
+
+        if (animator != null)
+        {
+            animator.ResetTrigger(idleTrigger);
+            animator.SetTrigger(runTrigger);
+        }
+    }
+
+    private void PlayIdleAnimation()
+    {
+        if (!isRunning)
+            return;
+
+        isRunning = false;
+
+        if (animator != null)
+        {
+            animator.ResetTrigger(runTrigger);
+            animator.SetTrigger(idleTrigger);
+        }
+    }
 }
+
 

@@ -1,111 +1,218 @@
 
+
+
 using UnityEngine;
 
 public class PlayerInteraction : MonoBehaviour
 {
-    [Header("Interaction")]
-    [SerializeField] private KeyCode interactionKey = KeyCode.F;
+    [Header("Interaction Settings")]
+    [SerializeField] private float interactionDistance = 3.5f;
     [SerializeField] private LayerMask interactionLayers = ~0;
 
-    private BrawlerHiring currentBrawler;
-    private CoreHealth currentCore;
+    [Header("References")]
+    [SerializeField] private PlayerHiring playerHiring;
+    [SerializeField] private Animator playerAnimator;
+
+    [Header("Interaction Animation")]
+    [SerializeField] private string comTrigger = "Com";
+
+    private CoreHealth activeCore;
+
+    private void Awake()
+    {
+        if (playerHiring == null)
+        {
+            playerHiring = GetComponent<PlayerHiring>();
+        }
+
+        if (playerAnimator == null)
+        {
+            playerAnimator = GetComponentInChildren<Animator>();
+        }
+
+        if (playerHiring == null)
+        {
+            Debug.LogError("PlayerHiring is missing from the Player!");
+        }
+
+        if (playerAnimator == null)
+        {
+            Debug.LogError("Player Animator is missing!");
+        }
+    }
 
     private void Update()
     {
-        FindNearestInteractable();
+        HandleInteraction();
+    }
 
-        // Hire the Brawler with one press.
-        if (currentBrawler != null &&
-            Input.GetKeyDown(interactionKey))
+    private void HandleInteraction()
+    {
+        // F pressed.
+        if (Input.GetKeyDown(KeyCode.F))
         {
-            currentBrawler.HireBrawler();
+            FindInteractionTarget();
         }
 
-        // Destroy the Core by holding F.
-        if (currentCore != null)
+        // F held for Core destruction.
+        if (Input.GetKey(KeyCode.F) && activeCore != null)
         {
-            if (Input.GetKey(interactionKey))
+            float distance = Vector3.Distance(
+                transform.position,
+                activeCore.transform.position
+            );
+
+            if (distance <= activeCore.InteractionDistance)
             {
-                currentCore.AdvanceHold(Time.deltaTime);
+                activeCore.AdvanceHold(Time.deltaTime);
             }
             else
             {
-                currentCore.ResetHold();
+                activeCore.ResetHold();
+                activeCore = null;
+
+                Debug.Log("Moved too far away. Core interaction cancelled.");
+            }
+        }
+
+        // F released.
+        if (Input.GetKeyUp(KeyCode.F))
+        {
+            if (activeCore != null)
+            {
+                activeCore.ResetHold();
+                activeCore = null;
             }
         }
     }
 
-    private void FindNearestInteractable()
+    private void FindInteractionTarget()
     {
-        BrawlerHiring nearestBrawler = null;
-        CoreHealth nearestCore = null;
-
-        float nearestDistance = Mathf.Infinity;
-
         Collider[] nearbyObjects = Physics.OverlapSphere(
             transform.position,
-            3.5f,
+            interactionDistance,
             interactionLayers,
             QueryTriggerInteraction.Collide
         );
 
+        UniversalHiring nearestNPC = null;
+        CoreHealth nearestCore = null;
+
+        float nearestDistance = Mathf.Infinity;
+
         foreach (Collider nearbyObject in nearbyObjects)
         {
-            BrawlerHiring brawler =
-                nearbyObject.GetComponentInParent<BrawlerHiring>();
+            // Ignore all colliders belonging to the Player.
+            if (nearbyObject.transform.root == transform.root)
+            {
+                continue;
+            }
+
+            UniversalHiring npc =
+                nearbyObject.GetComponentInParent<UniversalHiring>();
 
             CoreHealth core =
                 nearbyObject.GetComponentInParent<CoreHealth>();
 
-            if (brawler != null && !brawler.IsHired)
+            // Check for a hireable NPC.
+            if (npc != null && npc.CanBeHired())
             {
                 float distance = Vector3.Distance(
                     transform.position,
-                    brawler.transform.position
+                    npc.transform.position
                 );
 
-                if (distance <= brawler.HiringDistance &&
+                float allowedDistance = Mathf.Min(
+                    interactionDistance,
+                    npc.HiringDistance
+                );
+
+                if (distance <= allowedDistance &&
                     distance < nearestDistance)
                 {
                     nearestDistance = distance;
-                    nearestBrawler = brawler;
+                    nearestNPC = npc;
                     nearestCore = null;
                 }
             }
 
-            if (core != null && !core.IsDestroyed)
+            // Check for a Core.
+            if (core != null)
             {
                 float distance = Vector3.Distance(
                     transform.position,
                     core.transform.position
                 );
 
-                if (distance <= core.InteractionDistance &&
+                float allowedDistance = Mathf.Min(
+                    interactionDistance,
+                    core.InteractionDistance
+                );
+
+                if (distance <= allowedDistance &&
                     distance < nearestDistance)
                 {
                     nearestDistance = distance;
                     nearestCore = core;
-                    nearestBrawler = null;
+                    nearestNPC = null;
                 }
             }
         }
 
-        // Reset the old Core if the Player changes targets.
-        if (currentCore != null && currentCore != nearestCore)
+        // NPC found: hire it.
+        if (nearestNPC != null)
         {
-            currentCore.ResetHold();
+            Debug.Log("Interaction target detected: " + nearestNPC.gameObject.name);
+
+            if (playerHiring != null)
+            {
+                bool hired = playerHiring.TryHire(nearestNPC);
+
+                if (hired)
+                {
+                    PlayComAnimation();
+                }
+            }
+
+            return;
         }
 
-        currentBrawler = nearestBrawler;
-        currentCore = nearestCore;
+        // Core found: begin holding F.
+        if (nearestCore != null)
+        {
+            activeCore = nearestCore;
+
+            activeCore.ResetHold();
+
+            PlayComAnimation();
+
+            Debug.Log(
+                "Started destroying " + activeCore.gameObject.name +
+                ". Hold F for 10 seconds!"
+            );
+
+            return;
+        }
+
+        Debug.Log("No NPC or Core nearby.");
     }
 
-    private void OnDisable()
+    private void PlayComAnimation()
     {
-        if (currentCore != null)
-        {
-            currentCore.ResetHold();
-        }
+        if (playerAnimator == null || string.IsNullOrEmpty(comTrigger))
+            return;
+
+        playerAnimator.ResetTrigger(comTrigger);
+        playerAnimator.SetTrigger(comTrigger);
+
+        Debug.Log("Player Com animation triggered.");
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(transform.position, interactionDistance);
     }
 }
+
 

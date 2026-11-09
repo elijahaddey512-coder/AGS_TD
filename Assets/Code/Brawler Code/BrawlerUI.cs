@@ -5,8 +5,8 @@ using TMPro;
 public class BrawlerUI : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private BrawlerHiring hiring;
-    [SerializeField] private BrawlerSkill skill;
+    [SerializeField] private UniversalHiring hiring;
+    [SerializeField] private BrawlerAI brawlerAI;
 
     [Header("UI")]
     [SerializeField] private GameObject skillSlot;
@@ -20,15 +20,20 @@ public class BrawlerUI : MonoBehaviour
 
         if (numberText != null)
             numberText.text = "1";
+
+        if (cooldownText != null)
+            cooldownText.text = "";
     }
 
     private void Update()
     {
-        if (hiring == null || skill == null)
+        if (hiring == null || brawlerAI == null)
             return;
 
+        // Check whether the Brawler has been hired.
         bool hired = hiring.IsHired;
 
+        // Only show the skill slot after hiring.
         if (skillSlot != null &&
             skillSlot.activeSelf != hired)
         {
@@ -38,7 +43,8 @@ public class BrawlerUI : MonoBehaviour
         if (!hired)
             return;
 
-        float remaining = skill.CooldownRemaining;
+        // Get the remaining skill cooldown.
+        float remaining = brawlerAI.CooldownRemaining;
 
         if (cooldownText != null)
         {
@@ -54,5 +60,6 @@ public class BrawlerUI : MonoBehaviour
         }
     }
 }
+
 
 

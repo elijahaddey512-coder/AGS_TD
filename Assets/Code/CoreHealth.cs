@@ -1,21 +1,18 @@
 
-
 using UnityEngine;
 
 public class CoreHealth : MonoBehaviour
 {
-    [Header("Interaction Settings")]
-    [SerializeField] private float interactionDistance = 3f;
+    [Header("Core Settings")]
+    [SerializeField] private float interactionDistance = 3.5f;
     [SerializeField] private float holdDuration = 10f;
 
-    private float holdTimer;
-    private bool isDestroyed;
+    private float holdTimer = 0f;
+    private bool isDestroyed = false;
+    private int lastDisplayedSecond = -1;
 
-    public bool IsDestroyed => isDestroyed;
     public float InteractionDistance => interactionDistance;
-
-    public float HoldProgress =>
-        Mathf.Clamp01(holdTimer / holdDuration);
+    public float Progress => holdTimer / holdDuration;
 
     public void AdvanceHold(float deltaTime)
     {
@@ -23,6 +20,19 @@ public class CoreHealth : MonoBehaviour
             return;
 
         holdTimer += deltaTime;
+
+        int currentSecond = Mathf.FloorToInt(holdTimer);
+
+        if (currentSecond != lastDisplayedSecond)
+        {
+            lastDisplayedSecond = currentSecond;
+
+            Debug.Log(
+                gameObject.name + " destruction progress: " +
+                Mathf.Min(currentSecond, Mathf.CeilToInt(holdDuration)) +
+                "/" + Mathf.CeilToInt(holdDuration) + " seconds"
+            );
+        }
 
         if (holdTimer >= holdDuration)
         {
@@ -32,10 +42,16 @@ public class CoreHealth : MonoBehaviour
 
     public void ResetHold()
     {
-        if (!isDestroyed)
+        if (isDestroyed)
+            return;
+
+        if (holdTimer > 0f)
         {
-            holdTimer = 0f;
+            Debug.Log(gameObject.name + " destruction cancelled. Timer reset.");
         }
+
+        holdTimer = 0f;
+        lastDisplayedSecond = -1;
     }
 
     private void DestroyCore()
@@ -45,27 +61,18 @@ public class CoreHealth : MonoBehaviour
 
         isDestroyed = true;
 
-        Debug.Log(gameObject.name + " has been destroyed!");
+        Debug.Log("<color=red>" + gameObject.name + " has been destroyed!</color>");
 
         Destroy(gameObject);
     }
 
-    // Monsters cannot damage the Core.
-    public void TakeDamage(float damage)
-    {
-        Debug.Log("Only the Player can destroy this Core.");
-    }
-
     private void OnDrawGizmosSelected()
     {
-        Gizmos.color = Color.yellow;
-
-        Gizmos.DrawWireSphere(
-            transform.position,
-            interactionDistance
-        );
+        Gizmos.color = Color.red;
+        Gizmos.DrawWireSphere(transform.position, interactionDistance);
     }
 }
+
 
 
 

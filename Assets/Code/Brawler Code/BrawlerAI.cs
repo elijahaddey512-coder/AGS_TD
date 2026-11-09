@@ -1,11 +1,13 @@
 
 using UnityEngine;
 using UnityEngine.AI;
+using System.Collections;
+using System.Collections.Generic;
 
 public class BrawlerAI : MonoBehaviour
 {
     [Header("Hiring")]
-    [SerializeField] private BrawlerHiring hiring;
+    [SerializeField] private UniversalHiring hiring;
 
     [Header("Combat")]
     [SerializeField] private float detectionRange = 12f;
@@ -20,12 +22,27 @@ public class BrawlerAI : MonoBehaviour
 
     [Header("Animation")]
     [SerializeField] private Animator animator;
+    [SerializeField] private string idleTrigger = "Idle";
+    [SerializeField] private string runTrigger = "Run";
+    [SerializeField] private string attackTrigger = "Attack";
+    [SerializeField] private string skillTrigger = "Skill";
+
+    [Header("Special Skill")]
+    [SerializeField] private KeyCode skillKey = KeyCode.Alpha1;
+    [SerializeField] private float skillCooldown = 30f;
+    [SerializeField] private float skillDamage = 50f;
+    [SerializeField] private float impactRadius = 3f;
+    [SerializeField] private float jumpHeight = 2f;
+    [SerializeField] private float jumpDuration = 0.8f;
+    [SerializeField] private float smashAnimationDuration = 0.8f;
+    [SerializeField] private Transform model;
 
     private NavMeshAgent agent;
     private Transform currentTarget;
 
     private float nextAttackTime;
     private float attackEndTime;
+    private float nextSkillTime;
 
     private bool isMoving;
     private bool isUsingSkill;
@@ -34,15 +51,21 @@ public class BrawlerAI : MonoBehaviour
     private bool hasCommandDestination;
     private Vector3 commandDestination;
 
+    public float CooldownRemaining =>
+        Mathf.Max(0f, nextSkillTime - Time.time);
+
     private void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
 
         if (hiring == null)
-            hiring = GetComponent<BrawlerHiring>();
+            hiring = GetComponent<UniversalHiring>();
 
         if (animator == null)
             animator = GetComponentInChildren<Animator>();
+
+        if (model == null && animator != null)
+            model = animator.transform;
 
         if (agent != null)
         {
@@ -54,29 +77,34 @@ public class BrawlerAI : MonoBehaviour
 
     private void Update()
     {
-        // Do nothing until hired.
         if (hiring == null || !hiring.IsHired)
             return;
 
-        if (agent == null || !agent.enabled ||
-            !agent.isOnNavMesh)
-            return;
-
+        // Prevent normal AI from interrupting the skill.
         if (isUsingSkill)
             return;
 
-        // Follow the player's movement command first.
+        // Press 1 to use the special skill.
+        if (Input.GetKeyDown(skillKey) && Time.time >= nextSkillTime)
+        {
+            StartCoroutine(JumpAndSmash());
+            return;
+        }
+
+        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+            return;
+
+        // Follow player command destination.
         if (hasCommandDestination)
         {
             FollowCommandDestination();
             return;
         }
 
-        // Wait for the attack animation to finish.
+        // Wait for attack animation.
         if (Time.time < attackEndTime)
             return;
 
-        // Never interrupt Attack, Hurt or Die.
         if (IsPlayingPriorityAnimation())
         {
             agent.isStopped = true;
@@ -90,7 +118,7 @@ public class BrawlerAI : MonoBehaviour
             agent.isStopped = true;
             agent.ResetPath();
 
-            PlayMovement(false);
+            PlayMovement(false, true);
             return;
         }
 
@@ -100,29 +128,26 @@ public class BrawlerAI : MonoBehaviour
         );
 
         if (distance > attackRange)
-        {
             MoveTowardsEnemy();
-        }
         else
-        {
             AttackEnemy();
-        }
     }
+
+    // =====================================
+    // FIND NEAREST ENEMY
+    // =====================================
 
     private Transform FindNearestEnemy()
     {
         Collider[] nearbyObjects =
-            Physics.OverlapSphere(
-                transform.position,
-                detectionRange
-            );
+            Physics.OverlapSphere(transform.position, detectionRange);
 
         Transform nearestEnemy = null;
         float nearestDistance = Mathf.Infinity;
 
         foreach (Collider nearbyObject in nearbyObjects)
         {
-            if (!nearbyObject.CompareTag("Enemy"))
+            if (!HasEnemyTag(nearbyObject.transform))
                 continue;
 
             HealthSystem health =
@@ -132,27 +157,43 @@ public class BrawlerAI : MonoBehaviour
                 health.CurrentHealth <= 0)
                 continue;
 
-            Transform enemy = health.transform;
-
             float distance = Vector3.Distance(
                 transform.position,
-                enemy.position
+                health.transform.position
             );
 
             if (distance < nearestDistance)
             {
                 nearestDistance = distance;
-                nearestEnemy = enemy;
+                nearestEnemy = health.transform;
             }
         }
 
         return nearestEnemy;
     }
 
+    private bool HasEnemyTag(Transform target)
+    {
+        Transform current = target;
+
+        while (current != null)
+        {
+            if (current.CompareTag("Enemy"))
+                return true;
+
+            current = current.parent;
+        }
+
+        return false;
+    }
+
+    // =====================================
+    // MOVEMENT
+    // =====================================
+
     private void MoveTowardsEnemy()
     {
         agent.isStopped = false;
-
         agent.SetDestination(currentTarget.position);
 
         PlayMovement(true);
@@ -163,6 +204,10 @@ public class BrawlerAI : MonoBehaviour
         RotateTowards(direction);
     }
 
+    // =====================================
+    // NORMAL ATTACK
+    // =====================================
+
     private void AttackEnemy()
     {
         agent.isStopped = true;
@@ -172,14 +217,10 @@ public class BrawlerAI : MonoBehaviour
             currentTarget.position - transform.position;
 
         direction.y = 0f;
-
         RotateTowards(direction);
 
         if (Time.time < nextAttackTime)
-        {
-            PlayMovement(false);
             return;
-        }
 
         HealthSystem enemyHealth =
             currentTarget.GetComponentInParent<HealthSystem>();
@@ -187,43 +228,142 @@ public class BrawlerAI : MonoBehaviour
         if (enemyHealth == null || enemyHealth.IsDead)
             return;
 
-        // Deal normal attack damage.
         enemyHealth.TakeDamage(damage);
 
-        // Play Attack animation.
         if (animator != null)
         {
-            animator.SetTrigger("Attack");
+            animator.ResetTrigger(idleTrigger);
+            animator.ResetTrigger(runTrigger);
+            animator.ResetTrigger(attackTrigger);
+
+            animator.SetTrigger(attackTrigger);
         }
 
-        // Prevent another attack until cooldown finishes.
         nextAttackTime = Time.time + attackCooldown;
+        attackEndTime = Time.time + attackAnimationDuration;
 
-        // Prevent Idle or Run from interrupting Attack.
+        isMoving = false;
+    }
+
+    // =====================================
+    // SPECIAL SKILL: JUMP AND SMASH
+    // =====================================
+
+    private IEnumerator JumpAndSmash()
+    {
+        if (model == null)
+        {
+            Debug.LogWarning("Brawler: Model reference is missing!");
+            yield break;
+        }
+
+        if (animator == null)
+        {
+            Debug.LogWarning("Brawler: Animator reference is missing!");
+            yield break;
+        }
+
+        isUsingSkill = true;
+        nextSkillTime = Time.time + skillCooldown;
+
+        // Stop normal AI movement.
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
+        {
+            agent.isStopped = true;
+            agent.ResetPath();
+        }
+
         isMoving = false;
 
-        attackEndTime =
-            Time.time + attackAnimationDuration;
+        // Activate the Skill trigger.
+        TriggerSkillAnimation();
+
+        Debug.Log("Brawler Smash skill started!");
+
+        Vector3 startingPosition = model.localPosition;
+        float elapsedTime = 0f;
+
+        // Jump while the Smash animation plays.
+        while (elapsedTime < jumpDuration)
+        {
+            elapsedTime += Time.deltaTime;
+
+            float progress =
+                Mathf.Clamp01(elapsedTime / jumpDuration);
+
+            float height =
+                Mathf.Sin(progress * Mathf.PI) * jumpHeight;
+
+            model.localPosition =
+                startingPosition + Vector3.up * height;
+
+            yield return null;
+        }
+
+        // Restore original model position.
+        model.localPosition = startingPosition;
+
+        // Deal damage when the Brawler lands.
+        DealImpactDamage();
+
+        Debug.Log("Brawler landed and dealt Smash damage!");
+
+        // Wait for the remaining animation duration.
+        float remainingTime =
+            Mathf.Max(0f, smashAnimationDuration - jumpDuration);
+
+        if (remainingTime > 0f)
+            yield return new WaitForSeconds(remainingTime);
+
+        // Allow normal AI to resume.
+        isUsingSkill = false;
+
+        if (agent != null && agent.enabled && agent.isOnNavMesh)
+            agent.isStopped = false;
+
+        Debug.Log("Brawler Smash skill finished!");
     }
 
-    private void RotateTowards(Vector3 direction)
+    // =====================================
+    // SKILL DAMAGE
+    // =====================================
+
+    private void DealImpactDamage()
     {
-        if (direction.sqrMagnitude < 0.001f)
+        Collider[] hitObjects =
+            Physics.OverlapSphere(transform.position, impactRadius);
+
+        HashSet<HealthSystem> damagedEnemies =
+            new HashSet<HealthSystem>();
+
+        foreach (Collider hitObject in hitObjects)
+        {
+            if (!HasEnemyTag(hitObject.transform))
+                continue;
+
+            HealthSystem health =
+                hitObject.GetComponentInParent<HealthSystem>();
+
+            if (health == null || health.IsDead ||
+                health.CurrentHealth <= 0)
+                continue;
+
+            // Prevent hitting the same enemy more than once.
+            if (damagedEnemies.Add(health))
+                health.TakeDamage(skillDamage);
+        }
+    }
+
+    // =====================================
+    // ANIMATIONS
+    // =====================================
+
+    private void PlayMovement(bool moving, bool force = false)
+    {
+        if (isUsingSkill)
             return;
 
-        Quaternion targetRotation =
-            Quaternion.LookRotation(direction.normalized);
-
-        transform.rotation = Quaternion.RotateTowards(
-            transform.rotation,
-            targetRotation,
-            rotationSpeed * Time.deltaTime
-        );
-    }
-
-    private void PlayMovement(bool moving)
-    {
-        if (isMoving == moving)
+        if (!force && isMoving == moving)
             return;
 
         isMoving = moving;
@@ -231,7 +371,36 @@ public class BrawlerAI : MonoBehaviour
         if (animator == null)
             return;
 
-        animator.SetTrigger(moving ? "Run" : "Idle");
+        if (moving)
+        {
+            animator.ResetTrigger(idleTrigger);
+            animator.SetTrigger(runTrigger);
+        }
+        else
+        {
+            animator.ResetTrigger(runTrigger);
+            animator.SetTrigger(idleTrigger);
+        }
+    }
+
+    public void TriggerSkillAnimation()
+    {
+        if (animator == null)
+        {
+            Debug.LogWarning("Brawler: Animator is missing!");
+            return;
+        }
+
+        animator.ResetTrigger(idleTrigger);
+        animator.ResetTrigger(runTrigger);
+        animator.ResetTrigger(attackTrigger);
+
+        animator.ResetTrigger(skillTrigger);
+        animator.SetTrigger(skillTrigger);
+
+        isMoving = false;
+
+        Debug.Log("Brawler Smash Trigger activated!");
     }
 
     private bool IsPlayingPriorityAnimation()
@@ -259,31 +428,22 @@ public class BrawlerAI : MonoBehaviour
 
     private bool IsPriorityState(AnimatorStateInfo state)
     {
-        return state.shortNameHash ==
-                   Animator.StringToHash("Attack")
-            || state.shortNameHash ==
-                   Animator.StringToHash("Hurt")
-            || state.shortNameHash ==
-                   Animator.StringToHash("Die");
-    }
-
-    public void SetUsingSkill(bool value)
-    {
-        isUsingSkill = value;
-
-        if (agent != null && agent.enabled)
-            agent.isStopped = value;
-
-        if (value)
-            isMoving = false;
+        return state.shortNameHash == Animator.StringToHash("Hurt")
+            || state.shortNameHash == Animator.StringToHash("Die");
     }
 
     // =====================================
-    // COMMAND MOVEMENT SYSTEM
+    // COMMAND MOVEMENT
     // =====================================
 
     public void SetCommandDestination(Vector3 destination)
     {
+        if (hiring == null || !hiring.IsHired)
+            return;
+
+        if (isUsingSkill)
+            return;
+
         if (agent == null || !agent.enabled || !agent.isOnNavMesh)
             return;
 
@@ -306,7 +466,6 @@ public class BrawlerAI : MonoBehaviour
         if (agent.pathPending)
             return;
 
-        // Check whether the Brawler has reached its destination.
         if (agent.hasPath &&
             agent.remainingDistance <= agent.stoppingDistance + 0.2f)
         {
@@ -315,13 +474,12 @@ public class BrawlerAI : MonoBehaviour
             agent.isStopped = true;
             agent.ResetPath();
 
-            PlayMovement(false);
+            PlayMovement(false, true);
 
             Debug.Log("Brawler reached its destination!");
             return;
         }
 
-        // Continue moving towards the destination.
         agent.isStopped = false;
 
         Vector3 direction = agent.desiredVelocity;
@@ -331,6 +489,29 @@ public class BrawlerAI : MonoBehaviour
         PlayMovement(true);
     }
 
+    // =====================================
+    // ROTATION
+    // =====================================
+
+    private void RotateTowards(Vector3 direction)
+    {
+        if (direction.sqrMagnitude < 0.001f)
+            return;
+
+        Quaternion targetRotation =
+            Quaternion.LookRotation(direction.normalized);
+
+        transform.rotation = Quaternion.RotateTowards(
+            transform.rotation,
+            targetRotation,
+            rotationSpeed * Time.deltaTime
+        );
+    }
+
+    // =====================================
+    // GIZMOS
+    // =====================================
+
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
@@ -338,7 +519,15 @@ public class BrawlerAI : MonoBehaviour
 
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
+
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawWireSphere(transform.position, impactRadius);
     }
 }
+
+
+
+
+
 
 

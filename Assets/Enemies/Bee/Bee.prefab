@@ -2280,7 +2280,7 @@ MonoBehaviour:
   damage: 10
   attackCooldown: 2
   attackAnimationDuration: 1
-  animator: {fileID: 0}
+  animator: {fileID: 4487193816485317984}
 --- !u!95 &4487193816485317984
 Animator:
   serializedVersion: 7
