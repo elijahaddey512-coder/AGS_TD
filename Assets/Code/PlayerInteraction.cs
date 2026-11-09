@@ -1,22 +1,49 @@
 
-
-
+using TMPro;
 using UnityEngine;
 
 public class PlayerInteraction : MonoBehaviour
 {
+    //==========================================================
+    //INTERACTION SETTINGS
+    //==========================================================
+
     [Header("Interaction Settings")]
     [SerializeField] private float interactionDistance = 3.5f;
     [SerializeField] private LayerMask interactionLayers = ~0;
 
+
+    //==========================================================
+    //REFERENCES
+    //==========================================================
+
     [Header("References")]
     [SerializeField] private PlayerHiring playerHiring;
     [SerializeField] private Animator playerAnimator;
+    [SerializeField] private TMP_Text interactionPrompt;
+
+
+    //==========================================================
+    //ANIMATION
+    //==========================================================
 
     [Header("Interaction Animation")]
     [SerializeField] private string comTrigger = "Com";
 
+
+    //==========================================================
+    //INTERACTION VARIABLES
+    //==========================================================
+
+    [Header("Interaction Variables")]
+    private UniversalHiring nearestNPC;
+    private CoreHealth nearestCore;
     private CoreHealth activeCore;
+
+
+    //==========================================================
+    //INITIALIZATION
+    //==========================================================
 
     private void Awake()
     {
@@ -41,62 +68,29 @@ public class PlayerInteraction : MonoBehaviour
         }
     }
 
+
+    //==========================================================
+    //MAIN UPDATE LOOP
+    //==========================================================
+
     private void Update()
     {
+        FindInteractionTarget();
+        UpdateInteractionPrompt();
         HandleInteraction();
     }
 
-    private void HandleInteraction()
-    {
-        // F pressed.
-        if (Input.GetKeyDown(KeyCode.F))
-        {
-            FindInteractionTarget();
-        }
 
-        // F held for Core destruction.
-        if (Input.GetKey(KeyCode.F) && activeCore != null)
-        {
-            float distance = Vector3.Distance(
-                transform.position,
-                activeCore.transform.position
-            );
-
-            if (distance <= activeCore.InteractionDistance)
-            {
-                activeCore.AdvanceHold(Time.deltaTime);
-            }
-            else
-            {
-                activeCore.ResetHold();
-                activeCore = null;
-
-                Debug.Log("Moved too far away. Core interaction cancelled.");
-            }
-        }
-
-        // F released.
-        if (Input.GetKeyUp(KeyCode.F))
-        {
-            if (activeCore != null)
-            {
-                activeCore.ResetHold();
-                activeCore = null;
-            }
-        }
-    }
+    //==========================================================
+    //TARGET DETECTION
+    //==========================================================
 
     private void FindInteractionTarget()
     {
-        Collider[] nearbyObjects = Physics.OverlapSphere(
-            transform.position,
-            interactionDistance,
-            interactionLayers,
-            QueryTriggerInteraction.Collide
-        );
+        nearestNPC = null;
+        nearestCore = null;
 
-        UniversalHiring nearestNPC = null;
-        CoreHealth nearestCore = null;
+        Collider[] nearbyObjects = Physics.OverlapSphere(transform.position, interactionDistance, interactionLayers, QueryTriggerInteraction.Collide);
 
         float nearestDistance = Mathf.Infinity;
 
@@ -117,18 +111,11 @@ public class PlayerInteraction : MonoBehaviour
             // Check for a hireable NPC.
             if (npc != null && npc.CanBeHired())
             {
-                float distance = Vector3.Distance(
-                    transform.position,
-                    npc.transform.position
-                );
+                float distance = Vector3.Distance(transform.position, npc.transform.position);
 
-                float allowedDistance = Mathf.Min(
-                    interactionDistance,
-                    npc.HiringDistance
-                );
+                float allowedDistance = Mathf.Min(interactionDistance, npc.HiringDistance);
 
-                if (distance <= allowedDistance &&
-                    distance < nearestDistance)
+                if (distance <= allowedDistance && distance < nearestDistance)
                 {
                     nearestDistance = distance;
                     nearestNPC = npc;
@@ -139,18 +126,11 @@ public class PlayerInteraction : MonoBehaviour
             // Check for a Core.
             if (core != null)
             {
-                float distance = Vector3.Distance(
-                    transform.position,
-                    core.transform.position
-                );
+                float distance = Vector3.Distance(transform.position, core.transform.position);
 
-                float allowedDistance = Mathf.Min(
-                    interactionDistance,
-                    core.InteractionDistance
-                );
+                float allowedDistance = Mathf.Min(interactionDistance, core.InteractionDistance);
 
-                if (distance <= allowedDistance &&
-                    distance < nearestDistance)
+                if (distance <= allowedDistance && distance < nearestDistance)
                 {
                     nearestDistance = distance;
                     nearestCore = core;
@@ -158,44 +138,99 @@ public class PlayerInteraction : MonoBehaviour
                 }
             }
         }
+    }
 
-        // NPC found: hire it.
+
+    //==========================================================
+    //UI PROMPT
+    //==========================================================
+
+    private void UpdateInteractionPrompt()
+    {
+        if (interactionPrompt == null)
+            return;
+
         if (nearestNPC != null)
         {
-            Debug.Log("Interaction target detected: " + nearestNPC.gameObject.name);
+            interactionPrompt.text = "[ F ] Hire " + nearestNPC.transform.root.name;
+        }
 
-            if (playerHiring != null)
+        else if (nearestCore != null)
+        {
+            interactionPrompt.text = "[ Hold F ]  Destroy " + nearestCore.transform.root.name;
+        }
+        else
+        {
+            interactionPrompt.text = "";
+        }
+
+        interactionPrompt.gameObject.SetActive(nearestNPC != null || nearestCore != null);
+    }
+
+
+    //==========================================================
+    //INTERACTION INPUT
+    //==========================================================
+
+    private void HandleInteraction()
+    {
+        // Start interaction when F is pressed
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            if (nearestNPC != null)
             {
-                bool hired = playerHiring.TryHire(nearestNPC);
-
-                if (hired)
+                if (playerHiring.TryHire(nearestNPC))
                 {
                     PlayComAnimation();
                 }
             }
+            else if (nearestCore != null)
+            {
+                activeCore = nearestCore;
+                activeCore.ResetHold();
 
-            return;
+                PlayComAnimation();
+
+                Debug.Log("Started destroying Core!");
+            }
         }
 
-        // Core found: begin holding F.
-        if (nearestCore != null)
+        // Continue holding F to destroy Core
+        if (Input.GetKey(KeyCode.F) && activeCore != null)
         {
-            activeCore = nearestCore;
+            if (activeCore.IsDestroyed)
+            {
+                activeCore = null;
+                return;
+            }
 
-            activeCore.ResetHold();
-
-            PlayComAnimation();
-
-            Debug.Log(
-                "Started destroying " + activeCore.gameObject.name +
-                ". Hold F for 10 seconds!"
+            float distance = Vector3.Distance(
+                transform.position,
+                activeCore.transform.position
             );
 
-            return;
+            if (distance <= activeCore.InteractionDistance)
+            {
+                activeCore.AdvanceHold(Time.deltaTime);
+            }
+            else
+            {
+                activeCore.ResetHold();
+                activeCore = null;
+            }
         }
 
-        Debug.Log("No NPC or Core nearby.");
+        // Stop holding when F is released
+        if (Input.GetKeyUp(KeyCode.F) && activeCore != null)
+        {
+            activeCore.ResetHold();
+            activeCore = null;
+        }
     }
+
+    //==========================================================
+    //ANIMATION
+    //==========================================================
 
     private void PlayComAnimation()
     {
@@ -208,11 +243,14 @@ public class PlayerInteraction : MonoBehaviour
         Debug.Log("Player Com animation triggered.");
     }
 
+
+    //==========================================================
+    //DEBUG VISUALIZATION
+    //==========================================================
+
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, interactionDistance);
     }
 }
-
-

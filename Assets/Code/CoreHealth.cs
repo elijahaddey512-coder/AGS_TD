@@ -13,6 +13,7 @@ public class CoreHealth : MonoBehaviour
 
     public float InteractionDistance => interactionDistance;
     public float Progress => holdTimer / holdDuration;
+    public bool IsDestroyed => isDestroyed;
 
     public void AdvanceHold(float deltaTime)
     {
