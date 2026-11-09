@@ -1,5 +1,6 @@
 
 
+
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -12,6 +13,7 @@ public class UniversalHiring : MonoBehaviour
     [SerializeField] private Animator animator;
     [SerializeField] private string idleTrigger = "Idle";
 
+    // This NavMeshAgent belongs to the NPC, not the Player.
     private NavMeshAgent agent;
 
     public bool IsHired { get; private set; } = false;
@@ -34,13 +36,12 @@ public class UniversalHiring : MonoBehaviour
 
         Debug.Log(gameObject.name + " is waiting to be hired.");
 
-        if (agent == null)
+        // Only warn if this NPC has an agent but is not placed on the NavMesh.
+        if (agent != null && agent.enabled && !agent.isOnNavMesh)
         {
-            Debug.LogWarning(gameObject.name + " has no NavMeshAgent!");
-        }
-        else if (!agent.isOnNavMesh)
-        {
-            Debug.LogWarning(gameObject.name + " is not currently on the NavMesh!");
+            Debug.LogWarning(
+                gameObject.name + " has a NavMeshAgent but is not currently on the NavMesh!"
+            );
         }
     }
 
@@ -81,7 +82,8 @@ public class UniversalHiring : MonoBehaviour
             else
             {
                 Debug.LogWarning(
-                    gameObject.name + " was hired, but its NavMeshAgent is not on the NavMesh."
+                    gameObject.name +
+                    " was hired, but its NavMeshAgent is not on the NavMesh."
                 );
             }
         }
@@ -102,6 +104,7 @@ public class UniversalHiring : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, hiringDistance);
     }
 }
+
 
 
 

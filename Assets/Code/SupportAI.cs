@@ -1,4 +1,5 @@
 
+
 using UnityEngine;
 using UnityEngine.AI;
 using System.Collections.Generic;
@@ -71,13 +72,11 @@ public class SupportAI : MonoBehaviour
         if (hiring == null || !hiring.IsHired)
             return;
 
-        // Special skill: Key 3.
         if (Input.GetKeyDown(skillKey))
         {
             ActivateSkill();
         }
 
-        // Normal random damage buff.
         if (Time.time >= nextNormalBuffTime)
         {
             BuffRandomNPC();
@@ -85,7 +84,6 @@ public class SupportAI : MonoBehaviour
                 Time.time + normalBuffInterval;
         }
 
-        // Automatic healing.
         if (Time.time >= nextHealCheckTime)
         {
             AutomaticallyHealAllies();
@@ -116,6 +114,10 @@ public class SupportAI : MonoBehaviour
             if (!npc.IsHired)
                 continue;
 
+            // Shielder cannot receive damage buffs.
+            if (npc.GetComponent<ShielderAI>() != null)
+                continue;
+
             if (IsEnemy(npc.transform))
                 continue;
 
@@ -142,9 +144,7 @@ public class SupportAI : MonoBehaviour
 
         ApplyBuff(selectedNPC.gameObject);
 
-        Debug.Log(
-            "Support buffed " + selectedNPC.name
-        );
+        Debug.Log("Support buffed " + selectedNPC.name);
 
         PlayHealAnimation();
     }
@@ -171,6 +171,10 @@ public class SupportAI : MonoBehaviour
     private void ApplyBuff(GameObject target)
     {
         if (target == null || IsEnemy(target.transform))
+            return;
+
+        // Shielder is completely excluded from damage buffs.
+        if (target.GetComponent<ShielderAI>() != null)
             return;
 
         HealthSystem health =
@@ -216,8 +220,6 @@ public class SupportAI : MonoBehaviour
             UniversalHiring ally =
                 target.GetComponentInParent<UniversalHiring>();
 
-            // Only hired NPCs are eligible.
-            // Player is excluded.
             if (ally == null || !ally.IsHired)
                 continue;
 
@@ -279,13 +281,11 @@ public class SupportAI : MonoBehaviour
         {
             Transform target = nearbyObject.transform;
 
-            // Enemies are always excluded.
             if (IsEnemy(target))
                 continue;
 
             HealthSystem health = null;
 
-            // Check whether this is the Player.
             Transform playerRoot =
                 FindTaggedParent(target, "Player");
 
@@ -295,7 +295,6 @@ public class SupportAI : MonoBehaviour
             }
             else
             {
-                // Otherwise, it must be a hired NPC.
                 UniversalHiring ally =
                     target.GetComponentInParent<UniversalHiring>();
 
@@ -315,8 +314,10 @@ public class SupportAI : MonoBehaviour
             if (!affectedCharacters.Add(health))
                 continue;
 
+            // Shielder receives healing.
             health.Heal(skillHealAmount);
 
+            // ApplyBuff automatically excludes Shielder.
             ApplyBuff(health.gameObject);
 
             Debug.Log(
@@ -438,4 +439,5 @@ public class SupportAI : MonoBehaviour
         );
     }
 }
+
 

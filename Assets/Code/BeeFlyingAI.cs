@@ -25,11 +25,21 @@ public class BeeFlyingAI : MonoBehaviour
     [Header("Retaliation")]
     [SerializeField] private float retaliationMemoryDuration = 5f;
 
+    [Header("Shielder Aggro")]
+    [Range(0f, 1f)]
+    [SerializeField] private float shielderAggroChance = 0.8f;
+
+    [Header("Shielder Reflection")]
+    [SerializeField] private float reflectedDamage = 0.1f;
+
     [Header("Animation")]
     [SerializeField] private Animator animator;
 
     private NavMeshAgent agent;
     private Transform currentTarget;
+    private Transform lastShielderCandidate;
+
+    private bool prioritizeShielder;
 
     private Vector3 rotationDirection;
 
@@ -136,9 +146,30 @@ public class BeeFlyingAI : MonoBehaviour
     // TARGET SELECTION
     private Transform FindTarget()
     {
+        // PRIORITY 1: Shielder (80% chance)
+        Transform nearestShielder = FindNearestShielder();
+
+        if (nearestShielder == null)
+        {
+            lastShielderCandidate = null;
+            prioritizeShielder = false;
+        }
+        else if (nearestShielder != lastShielderCandidate)
+        {
+            lastShielderCandidate = nearestShielder;
+
+            prioritizeShielder =
+                Random.value <= shielderAggroChance;
+        }
+
+        if (nearestShielder != null && prioritizeShielder)
+        {
+            return nearestShielder;
+        }
+
+        // PRIORITY 2: Recently attacked by a hired NPC
         HealthSystem enemyHealth = GetComponent<HealthSystem>();
 
-        // PRIORITY 1: Recently attacked by a hired NPC
         if (enemyHealth != null && enemyHealth.LastAttacker != null)
         {
             float timeSinceAttack =
@@ -165,7 +196,7 @@ public class BeeFlyingAI : MonoBehaviour
             }
         }
 
-        // PRIORITY 2: Find nearest alive hired NPC
+        // PRIORITY 3: Find nearest alive hired NPC
         Collider[] nearbyObjects =
             Physics.OverlapSphere(transform.position, detectionRange);
 
@@ -178,6 +209,9 @@ public class BeeFlyingAI : MonoBehaviour
                 nearbyObject.GetComponentInParent<UniversalHiring>();
 
             if (hiring == null || !hiring.IsHired)
+                continue;
+
+            if (hiring.GetComponent<ShielderAI>() != null)
                 continue;
 
             HealthSystem health =
@@ -205,7 +239,7 @@ public class BeeFlyingAI : MonoBehaviour
             return nearestNPC;
         }
 
-        // PRIORITY 3: Player
+        // PRIORITY 4: Player
         if (player != null)
         {
             HealthSystem playerHealth =
@@ -220,6 +254,49 @@ public class BeeFlyingAI : MonoBehaviour
         }
 
         return null;
+    }
+
+    private Transform FindNearestShielder()
+    {
+        ShielderAI[] shielders =
+            FindObjectsByType<ShielderAI>();
+
+        Transform nearestShielder = null;
+        float nearestDistance = Mathf.Infinity;
+
+        foreach (ShielderAI shielder in shielders)
+        {
+            if (shielder == null)
+                continue;
+
+            UniversalHiring hiring =
+                shielder.GetComponent<UniversalHiring>();
+
+            HealthSystem health =
+                shielder.GetComponent<HealthSystem>();
+
+            if (hiring == null || !hiring.IsHired)
+                continue;
+
+            if (health == null ||
+                health.IsDead ||
+                health.CurrentHealth <= 0)
+                continue;
+
+            float distance = Vector3.Distance(
+                transform.position,
+                health.transform.position
+            );
+
+            if (distance <= detectionRange &&
+                distance < nearestDistance)
+            {
+                nearestDistance = distance;
+                nearestShielder = health.transform;
+            }
+        }
+
+        return nearestShielder;
     }
 
     private void MoveTowardsTarget()
@@ -270,9 +347,22 @@ public class BeeFlyingAI : MonoBehaviour
             HealthSystem targetHealth =
                 currentTarget.GetComponentInParent<HealthSystem>();
 
-            if (targetHealth != null && !targetHealth.IsDead)
+            if (targetHealth != null &&
+                !targetHealth.IsDead &&
+                targetHealth.CurrentHealth > 0)
             {
                 targetHealth.TakeDamage(damage, transform);
+
+                // Reflect damage when attacking the Shielder
+                if (currentTarget.GetComponentInParent<ShielderAI>() != null)
+                {
+                    HealthSystem beeHealth = GetComponent<HealthSystem>();
+
+                    if (beeHealth != null && !beeHealth.IsDead)
+                    {
+                        beeHealth.TakeDamage(reflectedDamage, currentTarget);
+                    }
+                }
             }
 
             nextAttackTime = Time.time + attackCooldown;
@@ -334,6 +424,7 @@ public class BeeFlyingAI : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, attackRange);
     }
 }
+
 
 
 

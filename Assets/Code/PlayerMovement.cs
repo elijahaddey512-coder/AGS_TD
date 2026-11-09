@@ -8,6 +8,11 @@ public class PlayerMovement : MonoBehaviour
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float gravity = -9.81f;
 
+    [Header("Ground Restriction")]
+    [SerializeField] private LayerMask groundLayer;
+    [SerializeField] private float groundCheckDistance = 1.5f;
+    [SerializeField] private float groundCheckHeight = 0.5f;
+
     [Header("Camera")]
     [SerializeField] private Transform cameraTransform;
 
@@ -18,7 +23,6 @@ public class PlayerMovement : MonoBehaviour
 
     private CharacterController controller;
     private Vector3 verticalVelocity;
-
     private bool isRunning = false;
 
     private void Awake()
@@ -26,20 +30,28 @@ public class PlayerMovement : MonoBehaviour
         controller = GetComponent<CharacterController>();
 
         if (cameraTransform == null && Camera.main != null)
-        {
             cameraTransform = Camera.main.transform;
-        }
 
         if (animator == null)
-        {
             animator = GetComponentInChildren<Animator>();
-        }
     }
 
     private void Update()
     {
         HandleMovement();
         HandleGravity();
+    }
+
+    private bool IsGroundBelow(Vector3 position)
+    {
+        Vector3 rayOrigin = position + Vector3.up * groundCheckHeight;
+
+        return Physics.Raycast(
+            rayOrigin,
+            Vector3.down,
+            groundCheckDistance,
+            groundLayer
+        );
     }
 
     private void HandleMovement()
@@ -50,9 +62,7 @@ public class PlayerMovement : MonoBehaviour
         Vector3 inputDirection =
             new Vector3(horizontal, 0f, vertical).normalized;
 
-        bool hasMovementInput = inputDirection.magnitude >= 0.1f;
-
-        if (hasMovementInput)
+        if (inputDirection.magnitude >= 0.1f)
         {
             Vector3 cameraForward = cameraTransform != null
                 ? cameraTransform.forward
@@ -72,18 +82,28 @@ public class PlayerMovement : MonoBehaviour
                 cameraForward * inputDirection.z +
                 cameraRight * inputDirection.x;
 
-            controller.Move(
-                moveDirection.normalized * moveSpeed * Time.deltaTime
-            );
+            Vector3 movement =
+                moveDirection.normalized * moveSpeed * Time.deltaTime;
 
-            // Rotate player towards movement direction.
-            transform.rotation = Quaternion.Slerp(
-                transform.rotation,
-                Quaternion.LookRotation(moveDirection),
-                12f * Time.deltaTime
-            );
+            // Check whether the next position has Ground beneath it.
+            Vector3 nextPosition = transform.position + movement;
 
-            PlayRunAnimation();
+            if (IsGroundBelow(nextPosition))
+            {
+                controller.Move(movement);
+
+                transform.rotation = Quaternion.Slerp(
+                    transform.rotation,
+                    Quaternion.LookRotation(moveDirection),
+                    12f * Time.deltaTime
+                );
+
+                PlayRunAnimation();
+            }
+            else
+            {
+                PlayIdleAnimation();
+            }
         }
         else
         {
@@ -131,5 +151,6 @@ public class PlayerMovement : MonoBehaviour
         }
     }
 }
+
 
 
