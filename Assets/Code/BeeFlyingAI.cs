@@ -290,19 +290,7 @@ public class BeeFlyingAI : MonoBehaviour
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
     }
-    public void SetCommandDestination(Vector3 destination)
-    {
-        if (agent == null || !agent.enabled || !agent.isOnNavMesh)
-            return;
-
-        agent.isStopped = false;
-        agent.SetDestination(destination);
-
-        if (animator != null)
-        {
-            animator.SetTrigger("Run");
-        }
-    }
+    
 }
 
 
