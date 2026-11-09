@@ -117,10 +117,13 @@ public class StickEnemyAI : MonoBehaviour
             return;
         }
 
-        float distance = Vector3.Distance(
-            transform.position,
-            currentTarget.position
-        );
+        Vector3 enemyPosition = transform.position;
+        Vector3 targetPosition = currentTarget.position;
+
+        enemyPosition.y = 0f;
+        targetPosition.y = 0f;
+
+        float distance = Vector3.Distance(enemyPosition, targetPosition);
 
         if (distance > attackRange)
         {

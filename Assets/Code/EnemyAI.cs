@@ -16,7 +16,7 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private float modelForwardOffset = 0f;
 
     [Header("Attack")]
-    [SerializeField] private float attackRange = 1.5f;
+    [SerializeField] private float attackRange = 2;
     [SerializeField] private float damage = 10f;
     [SerializeField] private float attackCooldown = 2f;
     [SerializeField] private float attackAnimationDuration = 1f;
@@ -108,10 +108,14 @@ public class EnemyAI : MonoBehaviour
             return;
         }
 
-        float distance = Vector3.Distance(
-            transform.position,
-            currentTarget.position
-        );
+        Vector3 enemyPosition = transform.position;
+        Vector3 targetPosition = currentTarget.position;
+
+        enemyPosition.y = 0f;
+        targetPosition.y = 0f;
+
+        float distance = Vector3.Distance(enemyPosition, targetPosition);
+        
 
         if (distance > attackRange)
         {
@@ -310,6 +314,7 @@ public class EnemyAI : MonoBehaviour
     private void AttackTarget()
     {
         agent.isStopped = true;
+        agent.ResetPath();
 
         rotationDirection =
             currentTarget.position - transform.position;
