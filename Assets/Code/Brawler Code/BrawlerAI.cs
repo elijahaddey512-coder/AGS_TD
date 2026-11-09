@@ -19,6 +19,8 @@ public class BrawlerAI : MonoBehaviour
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 3.5f;
     [SerializeField] private float rotationSpeed = 360f;
+    [SerializeField] private float followDistance = 4f;
+
 
     [Header("Animation")]
     [SerializeField] private Animator animator;
@@ -49,6 +51,8 @@ public class BrawlerAI : MonoBehaviour
 
     private bool hasCommandDestination;
     private Vector3 commandDestination;
+    private Transform followTarget;
+
 
     public float CooldownRemaining =>
         Mathf.Max(0f, nextSkillTime - Time.time);
@@ -75,6 +79,16 @@ public class BrawlerAI : MonoBehaviour
             agent.speed = moveSpeed;
             agent.isStopped = true;
         }
+    }
+
+    public void SetFollowTarget(Transform target)
+    {
+        if (hiring == null || !hiring.IsHired)
+            return;
+
+        followTarget = target;
+
+        Debug.Log("Brawler is now following the player!");
     }
 
     private void Update()
@@ -113,10 +127,7 @@ public class BrawlerAI : MonoBehaviour
 
         if (currentTarget == null)
         {
-            agent.isStopped = true;
-            agent.ResetPath();
-
-            PlayMovement(false, true);
+            FollowPlayer();
             return;
         }
 
@@ -191,6 +202,7 @@ public class BrawlerAI : MonoBehaviour
 
     private void MoveTowardsEnemy()
     {
+
         agent.isStopped = false;
         agent.SetDestination(currentTarget.position);
 
@@ -200,6 +212,42 @@ public class BrawlerAI : MonoBehaviour
         direction.y = 0f;
 
         RotateTowards(direction);
+    }
+
+    private void FollowPlayer()
+    {
+        if (followTarget == null)
+        {
+            agent.isStopped = true;
+            agent.ResetPath();
+            PlayMovement(false, true);
+            return;
+        }
+
+        float distance = Vector3.Distance(
+            transform.position,
+            followTarget.position
+        );
+
+        if (distance > followDistance)
+        {
+            agent.isStopped = false;
+            agent.SetDestination(followTarget.position);
+
+            PlayMovement(true);
+
+            Vector3 direction = agent.desiredVelocity;
+            direction.y = 0f;
+
+            RotateTowards(direction);
+        }
+        else
+        {
+            agent.isStopped = true;
+            agent.ResetPath();
+
+            PlayMovement(false);
+        }
     }
 
     // =====================================

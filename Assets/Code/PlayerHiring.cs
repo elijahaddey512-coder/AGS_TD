@@ -1,9 +1,12 @@
 
 
 using UnityEngine;
+using System.Collections.Generic;
 
 public class PlayerHiring : MonoBehaviour
 {
+    private List<UniversalHiring> hiredAllies = new List<UniversalHiring>();
+    public IReadOnlyList<UniversalHiring> HiredAllies => hiredAllies;
     public bool TryHire(UniversalHiring target)
     {
         if (target == null)
@@ -40,10 +43,9 @@ public class PlayerHiring : MonoBehaviour
 
         if (success)
         {
-            Debug.Log(
-                "<color=green>PlayerHiring: Successfully hired " +
-                target.gameObject.name + "</color>"
-            );
+            hiredAllies.Add(target);
+
+            Debug.Log("<color=green>PlayerHiring: Successfully hired " + target.gameObject.name + "</color>");
         }
 
         return success;

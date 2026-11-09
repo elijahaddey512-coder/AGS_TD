@@ -9,6 +9,7 @@ public class UniversalHiring : MonoBehaviour
     [Header("Hiring Settings")]
     [SerializeField] private float hiringDistance = 3f;
 
+
     [Header("Animation Settings")]
     [SerializeField] private Animator animator;
     [SerializeField] private string idleTrigger = "Idle";
@@ -45,6 +46,28 @@ public class UniversalHiring : MonoBehaviour
         }
     }
 
+    private void Update()
+    {
+        if (IsHired && agent != null && agent.hasPath)
+        {
+            Debug.Log(
+                gameObject.name +
+                " | Distance: " + agent.remainingDistance +
+                " | Velocity: " + agent.velocity
+            );
+        }
+
+        if (Input.GetKeyDown(KeyCode.P))
+        {
+            agent.isStopped = false;
+
+            bool result = agent.SetDestination(
+                transform.position + transform.forward * 5f
+            );
+
+            Debug.Log("Test movement destination accepted: " + result);
+        }
+    }
     private void StopNPC()
     {
         if (agent != null && agent.enabled && agent.isOnNavMesh)
@@ -92,6 +115,26 @@ public class UniversalHiring : MonoBehaviour
 
         return true;
     }
+
+    public void SummonToPlayer(Vector3 playerPosition)
+    {
+        Debug.Log("Summon called!");
+
+        if (!IsHired || agent == null || !agent.enabled || !agent.isOnNavMesh)
+            return;
+
+        agent.isStopped = false;
+
+        Vector3 targetPosition = playerPosition + Vector3.forward * 5f;
+
+        bool result = agent.SetDestination(targetPosition);
+
+        Debug.Log("Destination accepted: " + result);
+        Debug.Log("Target position: " + targetPosition);
+        Debug.Log("Agent destination: " + agent.destination);
+    }
+
+
 
     public bool CanBeHired()
     {

@@ -18,6 +18,7 @@ public class ShooterAI : MonoBehaviour
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 1.5f;
     [SerializeField] private float rotationSpeed = 240f;
+    [SerializeField] private float followDistance = 4f;
 
     [Header("Animation")]
     [SerializeField] private Animator animator;
@@ -30,6 +31,8 @@ public class ShooterAI : MonoBehaviour
 
     private bool isMoving;
     private bool hasCommandDestination;
+
+    private Transform followTarget;
 
     private Vector3 commandDestination;
 
@@ -55,6 +58,16 @@ public class ShooterAI : MonoBehaviour
         }
     }
 
+    public void SetFollowTarget(Transform target)
+    {
+        if (hiring == null || !hiring.IsHired)
+            return;
+
+        followTarget = target;
+
+        Debug.Log("Shooter is now following the player!");
+    }
+
     private void Update()
     {
         if (hiring == null || !hiring.IsHired)
@@ -64,6 +77,7 @@ public class ShooterAI : MonoBehaviour
             !agent.isOnNavMesh)
             return;
 
+        // Handle manual movement commands first.
         if (hasCommandDestination)
         {
             FollowCommandDestination();
@@ -79,14 +93,13 @@ public class ShooterAI : MonoBehaviour
             return;
         }
 
+        // Look for enemies.
         currentTarget = FindNearestEnemy();
 
+        // Follow player if no enemy is detected.
         if (currentTarget == null)
         {
-            agent.isStopped = true;
-            agent.ResetPath();
-
-            PlayMovement(false);
+            FollowPlayer();
             return;
         }
 
@@ -191,6 +204,42 @@ public class ShooterAI : MonoBehaviour
         direction.y = 0f;
 
         RotateTowards(direction);
+    }
+
+    private void FollowPlayer()
+    {
+        if (followTarget == null)
+        {
+            agent.isStopped = true;
+            agent.ResetPath();
+            PlayMovement(false);
+            return;
+        }
+
+        float distance = Vector3.Distance(
+            transform.position,
+            followTarget.position
+        );
+
+        if (distance > followDistance)
+        {
+            agent.isStopped = false;
+            agent.SetDestination(followTarget.position);
+
+            PlayMovement(true);
+
+            Vector3 direction = agent.desiredVelocity;
+            direction.y = 0f;
+
+            RotateTowards(direction);
+        }
+        else
+        {
+            agent.isStopped = true;
+            agent.ResetPath();
+
+            PlayMovement(false);
+        }
     }
 
     // =====================================
@@ -435,6 +484,3 @@ public class ShooterAI : MonoBehaviour
         );
     }
 }
-
-
-
