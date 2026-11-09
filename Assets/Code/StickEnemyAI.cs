@@ -1,11 +1,12 @@
 
+
 using UnityEngine;
 using UnityEngine.AI;
 
 public class StickEnemyAI : MonoBehaviour
 {
     [Header("Target")]
-    [SerializeField] private Transform player;
+    private Transform player;
 
     [Header("Movement")]
     [SerializeField] private float detectionRange = 15f;
@@ -22,6 +23,9 @@ public class StickEnemyAI : MonoBehaviour
     [SerializeField] private float damage = 10f;
     [SerializeField] private float attackCooldown = 2f;
     [SerializeField] private float attackAnimationDuration = 1f;
+
+    [Header("Retaliation")]
+    [SerializeField] private float retaliationMemoryDuration = 5f;
 
     [Header("Animation")]
     [SerializeField] private Animator animator;
@@ -56,9 +60,26 @@ public class StickEnemyAI : MonoBehaviour
 
     private void Start()
     {
+        FindPlayer();
+
         if (agent != null)
         {
             agent.speed = startingSpeed;
+        }
+    }
+
+    private void FindPlayer()
+    {
+        GameObject playerObject =
+            GameObject.FindGameObjectWithTag("Player");
+
+        if (playerObject != null)
+        {
+            player = playerObject.transform;
+        }
+        else
+        {
+            Debug.LogWarning("Stick could not find the Player!");
         }
     }
 
@@ -80,7 +101,6 @@ public class StickEnemyAI : MonoBehaviour
             rotationDirection = Vector3.zero;
             PlayMovement(false);
 
-            // Reset the speed timer when no target is available.
             movementStartTime = 0f;
             speedIncreased = false;
             agent.speed = startingSpeed;
@@ -108,8 +128,39 @@ public class StickEnemyAI : MonoBehaviour
         FaceDirection(rotationDirection);
     }
 
+    // TARGET SELECTION
     private Transform FindTarget()
     {
+        HealthSystem enemyHealth = GetComponent<HealthSystem>();
+
+        // PRIORITY 1: Recently attacked by a hired NPC
+        if (enemyHealth != null && enemyHealth.LastAttacker != null)
+        {
+            float timeSinceAttack =
+                Time.time - enemyHealth.LastAttackedTime;
+
+            if (timeSinceAttack <= retaliationMemoryDuration)
+            {
+                UniversalHiring hiring =
+                    enemyHealth.LastAttacker
+                    .GetComponentInParent<UniversalHiring>();
+
+                if (hiring != null && hiring.IsHired)
+                {
+                    HealthSystem attackerHealth =
+                        hiring.GetComponent<HealthSystem>();
+
+                    if (attackerHealth != null &&
+                        !attackerHealth.IsDead &&
+                        attackerHealth.CurrentHealth > 0)
+                    {
+                        return attackerHealth.transform;
+                    }
+                }
+            }
+        }
+
+        // PRIORITY 2: Find nearest alive hired NPC
         Collider[] nearbyObjects =
             Physics.OverlapSphere(transform.position, detectionRange);
 
@@ -118,33 +169,38 @@ public class StickEnemyAI : MonoBehaviour
 
         foreach (Collider nearbyObject in nearbyObjects)
         {
-            if (!nearbyObject.CompareTag("NPC"))
+            UniversalHiring hiring =
+                nearbyObject.GetComponentInParent<UniversalHiring>();
+
+            if (hiring == null || !hiring.IsHired)
                 continue;
 
             HealthSystem health =
-                nearbyObject.GetComponentInParent<HealthSystem>();
+                hiring.GetComponent<HealthSystem>();
 
-            if (health == null || health.IsDead ||
+            if (health == null ||
+                health.IsDead ||
                 health.CurrentHealth <= 0)
                 continue;
 
-            Transform target = health.transform;
-
             float distance = Vector3.Distance(
                 transform.position,
-                target.position
+                health.transform.position
             );
 
             if (distance < nearestDistance)
             {
                 nearestDistance = distance;
-                nearestNPC = target;
+                nearestNPC = health.transform;
             }
         }
 
         if (nearestNPC != null)
+        {
             return nearestNPC;
+        }
 
+        // PRIORITY 3: Player
         if (player != null)
         {
             HealthSystem playerHealth =
@@ -154,13 +210,7 @@ public class StickEnemyAI : MonoBehaviour
                 !playerHealth.IsDead &&
                 playerHealth.CurrentHealth > 0)
             {
-                float playerDistance = Vector3.Distance(
-                    transform.position,
-                    player.position
-                );
-
-                if (playerDistance <= detectionRange)
-                    return playerHealth.transform;
+                return playerHealth.transform;
             }
         }
 
@@ -170,17 +220,15 @@ public class StickEnemyAI : MonoBehaviour
     private void MoveTowardsTarget()
     {
         agent.isStopped = false;
-
         agent.SetDestination(currentTarget.position);
 
-        // Start the timer when the Stick begins moving.
         if (!isMoving)
         {
             movementStartTime = Time.time;
             speedIncreased = false;
+            agent.speed = startingSpeed;
         }
 
-        // Increase speed after 5 seconds of movement.
         if (!speedIncreased &&
             Time.time >= movementStartTime + speedIncreaseDelay)
         {
@@ -190,7 +238,6 @@ public class StickEnemyAI : MonoBehaviour
             Debug.Log("Stick has increased its movement speed!");
         }
 
-        // Face the actual movement direction.
         if (agent.velocity.sqrMagnitude > 0.01f)
         {
             rotationDirection = agent.velocity;
@@ -224,7 +271,7 @@ public class StickEnemyAI : MonoBehaviour
 
             if (targetHealth != null && !targetHealth.IsDead)
             {
-                targetHealth.TakeDamage(damage);
+                targetHealth.TakeDamage(damage, transform);
             }
 
             nextAttackTime = Time.time + attackCooldown;
@@ -286,4 +333,6 @@ public class StickEnemyAI : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, attackRange);
     }
 }
+
+
 

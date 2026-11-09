@@ -1,4 +1,5 @@
 
+
 using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
@@ -47,7 +48,6 @@ public class BrawlerAI : MonoBehaviour
     private bool isMoving;
     private bool isUsingSkill;
 
-    // Command movement
     private bool hasCommandDestination;
     private Vector3 commandDestination;
 
@@ -80,11 +80,9 @@ public class BrawlerAI : MonoBehaviour
         if (hiring == null || !hiring.IsHired)
             return;
 
-        // Prevent normal AI from interrupting the skill.
         if (isUsingSkill)
             return;
 
-        // Press 1 to use the special skill.
         if (Input.GetKeyDown(skillKey) && Time.time >= nextSkillTime)
         {
             StartCoroutine(JumpAndSmash());
@@ -94,14 +92,12 @@ public class BrawlerAI : MonoBehaviour
         if (agent == null || !agent.enabled || !agent.isOnNavMesh)
             return;
 
-        // Follow player command destination.
         if (hasCommandDestination)
         {
             FollowCommandDestination();
             return;
         }
 
-        // Wait for attack animation.
         if (Time.time < attackEndTime)
             return;
 
@@ -228,7 +224,8 @@ public class BrawlerAI : MonoBehaviour
         if (enemyHealth == null || enemyHealth.IsDead)
             return;
 
-        enemyHealth.TakeDamage(damage);
+        // Identify the Brawler as the attacker.
+        enemyHealth.TakeDamage(damage, transform);
 
         if (animator != null)
         {
@@ -266,7 +263,6 @@ public class BrawlerAI : MonoBehaviour
         isUsingSkill = true;
         nextSkillTime = Time.time + skillCooldown;
 
-        // Stop normal AI movement.
         if (agent != null && agent.enabled && agent.isOnNavMesh)
         {
             agent.isStopped = true;
@@ -275,7 +271,6 @@ public class BrawlerAI : MonoBehaviour
 
         isMoving = false;
 
-        // Activate the Skill trigger.
         TriggerSkillAnimation();
 
         Debug.Log("Brawler Smash skill started!");
@@ -283,7 +278,6 @@ public class BrawlerAI : MonoBehaviour
         Vector3 startingPosition = model.localPosition;
         float elapsedTime = 0f;
 
-        // Jump while the Smash animation plays.
         while (elapsedTime < jumpDuration)
         {
             elapsedTime += Time.deltaTime;
@@ -300,22 +294,18 @@ public class BrawlerAI : MonoBehaviour
             yield return null;
         }
 
-        // Restore original model position.
         model.localPosition = startingPosition;
 
-        // Deal damage when the Brawler lands.
         DealImpactDamage();
 
         Debug.Log("Brawler landed and dealt Smash damage!");
 
-        // Wait for the remaining animation duration.
         float remainingTime =
             Mathf.Max(0f, smashAnimationDuration - jumpDuration);
 
         if (remainingTime > 0f)
             yield return new WaitForSeconds(remainingTime);
 
-        // Allow normal AI to resume.
         isUsingSkill = false;
 
         if (agent != null && agent.enabled && agent.isOnNavMesh)
@@ -348,9 +338,11 @@ public class BrawlerAI : MonoBehaviour
                 health.CurrentHealth <= 0)
                 continue;
 
-            // Prevent hitting the same enemy more than once.
             if (damagedEnemies.Add(health))
-                health.TakeDamage(skillDamage);
+            {
+                // Identify the Brawler as the skill attacker.
+                health.TakeDamage(skillDamage, transform);
+            }
         }
     }
 
@@ -524,6 +516,7 @@ public class BrawlerAI : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, impactRadius);
     }
 }
+
 
 
 

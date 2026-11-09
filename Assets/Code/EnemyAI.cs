@@ -5,7 +5,7 @@ using UnityEngine.AI;
 public class EnemyAI : MonoBehaviour
 {
     [Header("Target")]
-    [SerializeField] private Transform player;
+    private Transform player;
 
     [Header("Movement")]
     [SerializeField] private float detectionRange = 15f;
@@ -20,6 +20,9 @@ public class EnemyAI : MonoBehaviour
     [SerializeField] private float damage = 10f;
     [SerializeField] private float attackCooldown = 2f;
     [SerializeField] private float attackAnimationDuration = 1f;
+
+    [Header("Retaliation")]
+    [SerializeField] private float retaliationMemoryDuration = 5f;
 
     [Header("Animation")]
     [SerializeField] private Animator animator;
@@ -46,16 +49,32 @@ public class EnemyAI : MonoBehaviour
 
         if (agent != null)
         {
-            // The script controls the Ant's rotation.
             agent.updateRotation = false;
         }
     }
 
     private void Start()
     {
+        FindPlayer();
+
         if (agent != null)
         {
             agent.speed = moveSpeed;
+        }
+    }
+
+    private void FindPlayer()
+    {
+        GameObject playerObject =
+            GameObject.FindGameObjectWithTag("Player");
+
+        if (playerObject != null)
+        {
+            player = playerObject.transform;
+        }
+        else
+        {
+            Debug.LogWarning("Ant could not find the Player!");
         }
     }
 
@@ -96,12 +115,42 @@ public class EnemyAI : MonoBehaviour
 
     private void LateUpdate()
     {
-        // Rotate the entire Ant after movement has been updated.
         FaceDirection(rotationDirection);
     }
 
+    // TARGET SELECTION
     private Transform FindTarget()
     {
+        HealthSystem enemyHealth = GetComponent<HealthSystem>();
+
+        // PRIORITY 1: Recently attacked by a hired NPC
+        if (enemyHealth != null && enemyHealth.LastAttacker != null)
+        {
+            float timeSinceAttack =
+                Time.time - enemyHealth.LastAttackedTime;
+
+            if (timeSinceAttack <= retaliationMemoryDuration)
+            {
+                UniversalHiring hiring =
+                    enemyHealth.LastAttacker
+                    .GetComponentInParent<UniversalHiring>();
+
+                if (hiring != null && hiring.IsHired)
+                {
+                    HealthSystem attackerHealth =
+                        hiring.GetComponent<HealthSystem>();
+
+                    if (attackerHealth != null &&
+                        !attackerHealth.IsDead &&
+                        attackerHealth.CurrentHealth > 0)
+                    {
+                        return attackerHealth.transform;
+                    }
+                }
+            }
+        }
+
+        // PRIORITY 2: Find nearest alive hired NPC
         Collider[] nearbyObjects =
             Physics.OverlapSphere(transform.position, detectionRange);
 
@@ -110,34 +159,38 @@ public class EnemyAI : MonoBehaviour
 
         foreach (Collider nearbyObject in nearbyObjects)
         {
-            if (!nearbyObject.CompareTag("NPC"))
+            UniversalHiring hiring =
+                nearbyObject.GetComponentInParent<UniversalHiring>();
+
+            if (hiring == null || !hiring.IsHired)
                 continue;
 
             HealthSystem health =
-                nearbyObject.GetComponentInParent<HealthSystem>();
+                hiring.GetComponent<HealthSystem>();
 
-            if (health == null || health.IsDead ||
+            if (health == null ||
+                health.IsDead ||
                 health.CurrentHealth <= 0)
                 continue;
 
-            Transform target = health.transform;
-
             float distance = Vector3.Distance(
                 transform.position,
-                target.position
+                health.transform.position
             );
 
             if (distance < nearestDistance)
             {
                 nearestDistance = distance;
-                nearestNPC = target;
+                nearestNPC = health.transform;
             }
         }
 
-        // NPCs have priority over the Player.
         if (nearestNPC != null)
+        {
             return nearestNPC;
+        }
 
+        // PRIORITY 3: Player
         if (player != null)
         {
             HealthSystem playerHealth =
@@ -147,13 +200,7 @@ public class EnemyAI : MonoBehaviour
                 !playerHealth.IsDead &&
                 playerHealth.CurrentHealth > 0)
             {
-                float playerDistance = Vector3.Distance(
-                    transform.position,
-                    player.position
-                );
-
-                if (playerDistance <= detectionRange)
-                    return playerHealth.transform;
+                return playerHealth.transform;
             }
         }
 
@@ -166,17 +213,14 @@ public class EnemyAI : MonoBehaviour
 
         agent.SetDestination(currentTarget.position);
 
-        // First try the actual direction of movement.
         if (agent.velocity.sqrMagnitude > 0.01f)
         {
             rotationDirection = agent.velocity;
         }
-        // If the Ant has not started moving yet, use its intended direction.
         else if (agent.desiredVelocity.sqrMagnitude > 0.01f)
         {
             rotationDirection = agent.desiredVelocity;
         }
-        // Final fallback: face the next NavMesh path point.
         else
         {
             rotationDirection =
@@ -190,7 +234,6 @@ public class EnemyAI : MonoBehaviour
     {
         agent.isStopped = true;
 
-        // While attacking, face the target instead of the movement direction.
         rotationDirection =
             currentTarget.position - transform.position;
 
@@ -203,7 +246,7 @@ public class EnemyAI : MonoBehaviour
 
             if (targetHealth != null && !targetHealth.IsDead)
             {
-                targetHealth.TakeDamage(damage);
+                targetHealth.TakeDamage(damage, transform);
             }
 
             nextAttackTime = Time.time + attackCooldown;
@@ -222,7 +265,6 @@ public class EnemyAI : MonoBehaviour
 
     private void FaceDirection(Vector3 direction)
     {
-        // Ignore vertical direction so the Ant stays upright.
         direction.y = 0f;
 
         if (direction.sqrMagnitude < 0.001f)
@@ -231,7 +273,6 @@ public class EnemyAI : MonoBehaviour
         Quaternion targetRotation =
             Quaternion.LookRotation(direction.normalized);
 
-        // Correct the model's forward-facing axis if necessary.
         targetRotation *= Quaternion.Euler(
             0f,
             modelForwardOffset,
@@ -267,6 +308,9 @@ public class EnemyAI : MonoBehaviour
         Gizmos.DrawWireSphere(transform.position, attackRange);
     }
 }
+
+
+
 
 
 

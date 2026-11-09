@@ -5,7 +5,7 @@ using UnityEngine.AI;
 public class BeeFlyingAI : MonoBehaviour
 {
     [Header("Target")]
-    [SerializeField] private Transform player;
+    private Transform player;
 
     [Header("Flying")]
     [SerializeField] private float detectionRange = 15f;
@@ -21,6 +21,9 @@ public class BeeFlyingAI : MonoBehaviour
     [SerializeField] private float damage = 10f;
     [SerializeField] private float attackCooldown = 2f;
     [SerializeField] private float attackAnimationDuration = 1f;
+
+    [Header("Retaliation")]
+    [SerializeField] private float retaliationMemoryDuration = 5f;
 
     [Header("Animation")]
     [SerializeField] private Animator animator;
@@ -48,7 +51,6 @@ public class BeeFlyingAI : MonoBehaviour
 
         if (agent != null)
         {
-            // The script controls movement and rotation.
             agent.updatePosition = false;
             agent.updateRotation = false;
         }
@@ -56,16 +58,31 @@ public class BeeFlyingAI : MonoBehaviour
 
     private void Start()
     {
+        FindPlayer();
+
         if (agent == null)
             return;
 
-        // Record the ground NavMesh height.
         groundHeight = agent.nextPosition.y;
 
-        // Move the Bee above the ground.
         Vector3 position = transform.position;
         position.y = groundHeight + flyingHeight;
         transform.position = position;
+    }
+
+    private void FindPlayer()
+    {
+        GameObject playerObject =
+            GameObject.FindGameObjectWithTag("Player");
+
+        if (playerObject != null)
+        {
+            player = playerObject.transform;
+        }
+        else
+        {
+            Debug.LogWarning("Bee could not find the Player!");
+        }
     }
 
     private void Update()
@@ -105,7 +122,6 @@ public class BeeFlyingAI : MonoBehaviour
             AttackTarget();
         }
 
-        // Keep the NavMeshAgent's internal position on the ground.
         Vector3 navPosition = transform.position;
         navPosition.y = groundHeight;
 
@@ -117,8 +133,39 @@ public class BeeFlyingAI : MonoBehaviour
         FaceDirection(rotationDirection);
     }
 
+    // TARGET SELECTION
     private Transform FindTarget()
     {
+        HealthSystem enemyHealth = GetComponent<HealthSystem>();
+
+        // PRIORITY 1: Recently attacked by a hired NPC
+        if (enemyHealth != null && enemyHealth.LastAttacker != null)
+        {
+            float timeSinceAttack =
+                Time.time - enemyHealth.LastAttackedTime;
+
+            if (timeSinceAttack <= retaliationMemoryDuration)
+            {
+                UniversalHiring hiring =
+                    enemyHealth.LastAttacker
+                    .GetComponentInParent<UniversalHiring>();
+
+                if (hiring != null && hiring.IsHired)
+                {
+                    HealthSystem attackerHealth =
+                        hiring.GetComponent<HealthSystem>();
+
+                    if (attackerHealth != null &&
+                        !attackerHealth.IsDead &&
+                        attackerHealth.CurrentHealth > 0)
+                    {
+                        return attackerHealth.transform;
+                    }
+                }
+            }
+        }
+
+        // PRIORITY 2: Find nearest alive hired NPC
         Collider[] nearbyObjects =
             Physics.OverlapSphere(transform.position, detectionRange);
 
@@ -127,33 +174,38 @@ public class BeeFlyingAI : MonoBehaviour
 
         foreach (Collider nearbyObject in nearbyObjects)
         {
-            if (!nearbyObject.CompareTag("NPC"))
+            UniversalHiring hiring =
+                nearbyObject.GetComponentInParent<UniversalHiring>();
+
+            if (hiring == null || !hiring.IsHired)
                 continue;
 
             HealthSystem health =
-                nearbyObject.GetComponentInParent<HealthSystem>();
+                hiring.GetComponent<HealthSystem>();
 
-            if (health == null || health.IsDead ||
+            if (health == null ||
+                health.IsDead ||
                 health.CurrentHealth <= 0)
                 continue;
 
-            Transform target = health.transform;
-
             float distance = Vector3.Distance(
                 transform.position,
-                target.position
+                health.transform.position
             );
 
             if (distance < nearestDistance)
             {
                 nearestDistance = distance;
-                nearestNPC = target;
+                nearestNPC = health.transform;
             }
         }
 
         if (nearestNPC != null)
+        {
             return nearestNPC;
+        }
 
+        // PRIORITY 3: Player
         if (player != null)
         {
             HealthSystem playerHealth =
@@ -163,13 +215,7 @@ public class BeeFlyingAI : MonoBehaviour
                 !playerHealth.IsDead &&
                 playerHealth.CurrentHealth > 0)
             {
-                float playerDistance = Vector3.Distance(
-                    transform.position,
-                    player.position
-                );
-
-                if (playerDistance <= detectionRange)
-                    return playerHealth.transform;
+                return playerHealth.transform;
             }
         }
 
@@ -180,7 +226,6 @@ public class BeeFlyingAI : MonoBehaviour
     {
         agent.isStopped = false;
 
-        // Ask the NavMeshAgent to calculate the route.
         Vector3 targetPosition = currentTarget.position;
 
         NavMeshHit hit;
@@ -194,10 +239,8 @@ public class BeeFlyingAI : MonoBehaviour
             agent.SetDestination(hit.position);
         }
 
-        // Follow the calculated path.
         Vector3 nextPoint = agent.steeringTarget;
 
-        // Keep the Bee at its flying height.
         nextPoint.y = groundHeight + flyingHeight;
 
         Vector3 direction = nextPoint - transform.position;
@@ -229,7 +272,7 @@ public class BeeFlyingAI : MonoBehaviour
 
             if (targetHealth != null && !targetHealth.IsDead)
             {
-                targetHealth.TakeDamage(damage);
+                targetHealth.TakeDamage(damage, transform);
             }
 
             nextAttackTime = Time.time + attackCooldown;
@@ -290,8 +333,9 @@ public class BeeFlyingAI : MonoBehaviour
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, attackRange);
     }
-    
 }
+
+
 
 
 

@@ -1,7 +1,4 @@
 
-
-
-
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -56,7 +53,6 @@ public class ShooterAI : MonoBehaviour
 
     private void Update()
     {
-        // Shooter remains passive until hired.
         if (hiring == null || !hiring.IsHired)
             return;
 
@@ -64,28 +60,23 @@ public class ShooterAI : MonoBehaviour
             !agent.isOnNavMesh)
             return;
 
-        // Follow player's command first.
         if (hasCommandDestination)
         {
             FollowCommandDestination();
             return;
         }
 
-        // Wait for the shooting animation to finish.
         if (Time.time < shootingEndTime)
             return;
 
-        // Do not interrupt Hurt or Die animations.
         if (IsPlayingPriorityAnimation())
         {
             agent.isStopped = true;
             return;
         }
 
-        // Find the nearest enemy.
         currentTarget = FindNearestEnemy();
 
-        // No enemy nearby: return to Idle.
         if (currentTarget == null)
         {
             agent.isStopped = true;
@@ -127,8 +118,7 @@ public class ShooterAI : MonoBehaviour
 
         foreach (Collider nearbyObject in nearbyObjects)
         {
-            // Only target enemies.
-            if (!nearbyObject.CompareTag("Enemy"))
+            if (!HasEnemyTag(nearbyObject.transform))
                 continue;
 
             HealthSystem health =
@@ -138,7 +128,6 @@ public class ShooterAI : MonoBehaviour
                 health.CurrentHealth <= 0)
                 continue;
 
-            // Use the health component's GameObject as the target.
             Transform enemy = health.transform;
 
             float distance = Vector3.Distance(
@@ -156,6 +145,21 @@ public class ShooterAI : MonoBehaviour
         return nearestEnemy;
     }
 
+    private bool HasEnemyTag(Transform target)
+    {
+        Transform current = target;
+
+        while (current != null)
+        {
+            if (current.CompareTag("Enemy"))
+                return true;
+
+            current = current.parent;
+        }
+
+        return false;
+    }
+
     // =====================================
     // MOVEMENT
     // =====================================
@@ -168,7 +172,6 @@ public class ShooterAI : MonoBehaviour
 
         NavMeshHit hit;
 
-        // Find a suitable ground NavMesh position.
         if (NavMesh.SamplePosition(
             targetPosition,
             out hit,
@@ -202,7 +205,6 @@ public class ShooterAI : MonoBehaviour
 
         RotateTowards(direction);
 
-        // Wait for next available shot.
         if (Time.time < nextAttackTime)
         {
             PlayMovement(false);
@@ -216,22 +218,20 @@ public class ShooterAI : MonoBehaviour
             enemyHealth.CurrentHealth <= 0)
             return;
 
-        // Check whether the target is a flying Bee.
         BeeFlyingAI bee =
             currentTarget.GetComponentInParent<BeeFlyingAI>();
 
         float damageToDeal =
             bee != null ? flyingDamage : groundDamage;
 
-        // Apply damage.
-        enemyHealth.TakeDamage(damageToDeal);
+        // Identify the Shooter as the attacker.
+        enemyHealth.TakeDamage(damageToDeal, transform);
 
         Debug.Log(
             "Shooter fired at " + currentTarget.name +
             " for " + damageToDeal + " damage!"
         );
 
-        // Play Shoot animation.
         if (animator != null)
         {
             animator.ResetTrigger("Idle");
@@ -241,10 +241,8 @@ public class ShooterAI : MonoBehaviour
             animator.SetTrigger("Shoot");
         }
 
-        // Start cooldown.
         nextAttackTime = Time.time + attackCooldown;
 
-        // Allow Idle to trigger after shooting.
         isMoving = true;
 
         shootingEndTime =

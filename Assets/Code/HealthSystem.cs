@@ -1,5 +1,6 @@
 
 using UnityEngine;
+using UnityEngine.AI;
 
 public class HealthSystem : MonoBehaviour
 {
@@ -13,6 +14,9 @@ public class HealthSystem : MonoBehaviour
     private float currentHealth;
     private bool isDead = false;
 
+    public Transform LastAttacker { get; private set; }
+    public float LastAttackedTime { get; private set; }
+
     public float CurrentHealth => currentHealth;
     public bool IsDead => isDead;
 
@@ -20,7 +24,6 @@ public class HealthSystem : MonoBehaviour
     {
         currentHealth = maxHealth;
 
-        // Automatically find Animator if one is not assigned.
         if (animator == null)
         {
             animator = GetComponentInChildren<Animator>();
@@ -29,7 +32,22 @@ public class HealthSystem : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
-        // Ignore damage if already dead.
+        ApplyDamage(damage);
+    }
+
+    public void TakeDamage(float damage, Transform attacker)
+    {
+        if (attacker != null)
+        {
+            LastAttacker = attacker;
+            LastAttackedTime = Time.time;
+        }
+
+        ApplyDamage(damage);
+    }
+
+    private void ApplyDamage(float damage)
+    {
         if (isDead)
             return;
 
@@ -71,17 +89,18 @@ public class HealthSystem : MonoBehaviour
             animator.SetTrigger("Die");
         }
 
-        // Stop movement if this object has a NavMeshAgent.
-        UnityEngine.AI.NavMeshAgent agent =
-            GetComponent<UnityEngine.AI.NavMeshAgent>();
+        NavMeshAgent agent = GetComponent<NavMeshAgent>();
 
-        if (agent != null)
+        if (agent != null && agent.enabled)
         {
-            agent.isStopped = true;
+            if (agent.isOnNavMesh)
+            {
+                agent.isStopped = true;
+            }
+
             agent.enabled = false;
         }
 
-        // Stop movement if this object has a Rigidbody.
         Rigidbody rb = GetComponent<Rigidbody>();
 
         if (rb != null)
@@ -93,5 +112,7 @@ public class HealthSystem : MonoBehaviour
         Destroy(gameObject, deathAnimationDuration);
     }
 }
+
+
 
 

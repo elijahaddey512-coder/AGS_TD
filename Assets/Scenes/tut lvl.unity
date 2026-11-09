@@ -7428,9 +7428,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RandomMonsterSpawner
   monsterPrefabs:
-  - {fileID: 8717097665993203592, guid: 831a45518e3d05342b58e0b36a48b74c, type: 3}
-  - {fileID: 8615858941580018772, guid: 0febee8e8457aa4498dca1e6379bc3c8, type: 3}
-  - {fileID: 7539449906429842441, guid: 669f2a71060846a4190ea3c251c6e628, type: 3}
+  - {fileID: 3899868334980505647, guid: 59607d408a62df64b9255a4b9aa3fe1e, type: 3}
+  - {fileID: 6583818298128057629, guid: 49bf73c3adde71e4b9ef1c62044fa68d, type: 3}
+  - {fileID: 1828948549429460583, guid: 47d04c2d1a9f1b74292d9c53a770bc2f, type: 3}
   spawnPoint: {fileID: 1874018020}
   initialDelay: 10
   spawnInterval: 3
@@ -33972,8 +33972,7 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 9021535615939706384, guid: 2f0b03edf848dc748b2423e7c578c7d2, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
@@ -40895,6 +40894,11 @@ Animator:
   m_CorrespondingSourceObject: {fileID: 9091593814158243014, guid: 2f0b03edf848dc748b2423e7c578c7d2, type: 3}
   m_PrefabInstance: {fileID: 1102877149}
   m_PrefabAsset: {fileID: 0}
+--- !u!4 &1319263894 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8843777367123654905, guid: 2f0b03edf848dc748b2423e7c578c7d2, type: 3}
+  m_PrefabInstance: {fileID: 1102877149}
+  m_PrefabAsset: {fileID: 0}
 --- !u!195 &1319263895
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -40953,7 +40957,18 @@ MonoBehaviour:
   moveSpeed: 3.5
   rotationSpeed: 360
   animator: {fileID: 1319263893}
-  skillAnimationState: Skill
+  idleTrigger: Idle
+  runTrigger: Run
+  attackTrigger: Attack
+  skillTrigger: Skill
+  skillKey: 49
+  skillCooldown: 20
+  skillDamage: 50
+  impactRadius: 3
+  jumpHeight: 2
+  jumpDuration: 0.8
+  smashAnimationDuration: 0.8
+  model: {fileID: 1319263894}
 --- !u!114 &1319263903
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -43931,7 +43946,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BrawlerUI
   hiring: {fileID: 0}
-  skill: {fileID: 0}
+  brawlerAI: {fileID: 0}
   skillSlot: {fileID: 0}
   numberText: {fileID: 0}
   cooldownText: {fileID: 1207970016}
