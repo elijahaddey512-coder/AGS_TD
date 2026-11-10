@@ -653,8 +653,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HealthSystem
   maxHealth: 80
-  animator: {fileID: 3019969418486542195}
+  startingHealth: 100
   deathAnimationDuration: 2
+  animator: {fileID: 3019969418486542195}
+  CurrentHealths: 0
+  maxHealths: 100
+  healthbar: {fileID: 0}
 --- !u!114 &6302727878717760814
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -667,10 +671,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 77ae99231fd62cf43abdcc036492f819, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StickEnemyAI
-  player: {fileID: 0}
   detectionRange: 100
   startingSpeed: 1.5
-  increasedSpeed: 10
+  increasedSpeed: 6
   speedIncreaseDelay: 5
   rotationSpeed: 360
   modelForwardOffset: 90
@@ -678,6 +681,9 @@ MonoBehaviour:
   damage: 10
   attackCooldown: 2
   attackAnimationDuration: 1
+  retaliationMemoryDuration: 5
+  shielderAggroChance: 0.8
+  reflectedDamage: 0.1
   animator: {fileID: 3019969418486542195}
 --- !u!95 &3019969418486542195
 Animator:
